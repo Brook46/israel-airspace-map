@@ -30,6 +30,8 @@ const META = {
   aip_uas: { z: 9, g: 'Airspace', n: 'No-fly circles (LLU)', t: 'No-fly area (LLU)', c: '#ff2d55', d: 'Small no-fly circle around a sensitive site. Applies to drones, sport aviation and helicopters flying outside published routes.' },
   aip_obst: { z: 9, g: 'Airspace', n: 'Fixed obstacles & balloons', t: 'Fixed obstacle', c: '#8d6e4c', d: 'Permanent hazard such as a tethered balloon. Keep clear.' },
   aip_other: { g: 'Airspace', n: 'Other airspace', t: 'Airspace', c: '#8e8e93' },
+  nature_reserve: { z: 9, g: 'Nature', n: 'Nature reserves, parks & nesting sites', t: 'Nature reserve / national park', c: '#2e8b57',
+    d: 'Official list (domestic AIP, appendix E): no flight below the listed height above ground. Per the AIP these closures do not apply to non-powered paragliders and hang gliders. The outline comes from OpenStreetMap.' },
   // routes
   cvfr_route: { z: 9.5, g: 'Routes & points', n: 'CVFR routes', t: 'CVFR low-level route', c: '#1e9e55', d: 'Controlled-VFR transport route. Paragliders must stay 1 km to each side and 500 ft above/below.' },
   cvfr_mil: { z: 9.5, g: 'Routes & points', n: 'Military low-level routes', t: 'Military low-level route', c: '#1f6fd1', d: 'Military low-level route. Expect fast military traffic.' },
@@ -45,7 +47,7 @@ const META = {
   notam_ifr: { g: 'NOTAMs', n: 'Aerodrome & IFR info', t: 'NOTAM · aerodrome / IFR', c: '#8e8e93' },
   custom: { g: 'Your files', n: 'Imported airspace', t: 'Imported airspace', c: '#5e5ce6' },
 };
-const GROUPS = ['Paragliding sites', 'Sport aviation', 'Airspace', 'Routes & points', 'NOTAMs', 'Your files'];
+const GROUPS = ['Paragliding sites', 'Sport aviation', 'Airspace', 'Nature', 'Routes & points', 'NOTAMs', 'Your files'];
 const CORE = ['aip_ctr', 'aip_atz', 'aip_tma', 'aip_prohibited', 'aip_restricted', 'aip_danger', 'aip_uas', 'aip_obst', 'custom'];
 const SPORT = ['sport_bubble_all', 'sport_bubble_end', 'sport_route_mid', 'sport_route_end', 'sport_route_special'];
 const N_SPORT = ['notam_restr', 'notam_para', 'notam_uas', 'notam_obst', 'notam_sport', 'notam_airspace'];
@@ -63,7 +65,7 @@ const PROFILES = {
   },
   ppg: {
     name: 'PPG', speed: 45, lo: 0, hi: 4000, when: 'now',
-    layers: [...CORE, ...SPORT, ...SITES, 'cvfr_route', ...N_SPORT],
+    layers: [...CORE, ...SPORT, ...SITES, 'cvfr_route', 'nature_reserve', ...N_SPORT],
     note: 'Powered paraglider, 0–4,000 ft: the bubbles where you may fly for the chosen day, the sport routes between them, takeoffs and landings, plus everything that restricts you at those heights.',
     rules: ['Fly inside the sport-aviation bubbles; moving between bubbles that do not touch follows procedure B-10.',
       'Cross sport routes only to transit between areas, at about 200 ft AGL — do not fly along them.',
@@ -72,18 +74,18 @@ const PROFILES = {
   },
   ul: {
     name: 'Ultralight', speed: 110, lo: 0, hi: 6000, when: 'now',
-    layers: [...CORE, ...SPORT, 'cvfr_route', 'vfr_points', ...N_SPORT, 'notam_route'],
+    layers: [...CORE, ...SPORT, 'cvfr_route', 'vfr_points', 'nature_reserve', ...N_SPORT, 'notam_route'],
     note: 'Ultralight / microlight, 0–6,000 ft: bubbles and sport routes for the chosen day, CVFR routes and reporting points (zoom in), and restrictions at those heights.',
     rules: ['Bubbles: VFR, no flight plan, but take-off approval from the relevant ATC unit. Routes outside bubbles need a flight plan and radio contact.',
       'Sport routes are flown at the published altitudes; dashed legs only with controller approval.'],
   },
   ga: {
     name: 'GA / VFR', speed: 180, lo: 0, hi: null, when: 'today',
-    layers: [...CORE, 'aip_other', 'cvfr_route', 'cvfr_mil', 'vfr_points', 'sport_bubble_all', 'sport_bubble_end', ...N_SPORT, 'notam_route', 'notam_ifr'],
+    layers: [...CORE, 'aip_other', 'cvfr_route', 'cvfr_mil', 'vfr_points', 'sport_bubble_all', 'sport_bubble_end', 'nature_reserve', ...N_SPORT, 'notam_route', 'notam_ifr'],
     note: 'General aviation: all airspace at every height, CVFR and military routes, reporting points, sport bubbles (traffic) and all operational NOTAMs.',
     rules: ['CVFR routes: max 180 kt unless approved; transponder on (code 5100 unless told otherwise).'],
   },
-  uas: { name: 'Drone', speed: 50, lo: 0, hi: 400, when: 'now', layers: ['aip_ctr', 'aip_prohibited', 'aip_restricted', 'aip_danger', 'aip_uas', 'aip_obst', 'notam_uas', 'notam_restr', 'notam_obst', 'notam_airspace', 'custom'], note: 'Drones below 400 ft.', rules: [] },
+  uas: { name: 'Drone', speed: 50, lo: 0, hi: 400, when: 'now', layers: ['aip_ctr', 'aip_prohibited', 'aip_restricted', 'aip_danger', 'aip_uas', 'aip_obst', 'nature_reserve', 'notam_uas', 'notam_restr', 'notam_obst', 'notam_airspace', 'custom'], note: 'Drones below 400 ft.', rules: [] },
   custom: { name: 'Custom', speed: 40, lo: 0, hi: null, layers: 'custom', note: 'Your own selection of layers and heights. Any change you make to layers or heights is saved here automatically and kept between visits.', rules: [] },
   all: { name: 'Everything', speed: 100, lo: 0, hi: null, when: 'any', layers: null, note: 'Every layer at every height.', rules: [] },
 };
@@ -137,7 +139,7 @@ const area = z => { const b = bbox(z); return (b[1] - b[0]) * (b[3] - b[2]); };
 const meta = z => META[z.layer] || META.aip_other;
 const zkey = z => `${z.layer}|${z.id}|${(z.geom?.ring?.[0] || []).join(',')}`;
 function fmtAlt(v, ref) {
-  if (v == null) return '—'; if (v === 0) return 'GND'; if (v >= UNL) return 'Unlimited';
+  if (v == null) return '—'; if (v === 0) return 'GND'; if (v >= UNL) return 'Unlimited'; if (v < 0) return `${(-v).toLocaleString('en-US')} ft below sea level`;
   return v.toLocaleString('en-US') + ' ft' + (ref === 'AGL' ? ' AGL' : ref === 'FL' ? ` (FL${String(Math.round(v / 100)).padStart(3, '0')})` : '');
 }
 const altShort = (v, ref) => v == null ? '' : v === 0 ? 'GND' : v >= UNL ? 'UNL' : (ref === 'FL' ? 'FL' + Math.round(v / 100) : String(v)) + (ref === 'AGL' ? ' AGL' : '');
@@ -229,7 +231,7 @@ function render() {
       sh = L.polyline(z.geom.ring, { color: m.c, weight: z.layer.startsWith('notam') ? 4 : 2.5, opacity: .85, dashArray: z.approval || z.layer.startsWith('notam') ? '8 6' : null });
       sh.on('click', () => { clickZone = z; });
     } else {
-      const bub = z.layer.startsWith('sport_bubble'), appr = z.geom.approx, wk = z.layer === 'aip_ctr' && z.days;
+      const bub = z.layer.startsWith('sport_bubble') || z.layer === 'nature_reserve', appr = z.geom.approx, wk = z.layer === 'aip_ctr' && z.days;
       sh = L.polygon(z.geom.ring, { color: m.c, weight: bub ? 1.2 : appr ? 1.2 : 2, dashArray: appr || wk ? '5 5' : z.matched ? '6 3' : null, fillColor: m.c, fillOpacity: bub ? .16 : appr ? .035 : z.matched ? .3 : .12 });
       if (LABELED.has(z.layer) && !appr) {
         const c = z.geom.center || polyLabelPoint(z);
@@ -289,7 +291,7 @@ function updateHere() {
 }
 function updateNotices() {
   const ns = zones.filter(z => !z.geom && z.source === 'NOTAM' && z.layer !== 'notam_ifr' && enabled[z.layer] !== false && (!WIN || activeIn(z, WIN.a, WIN.b)));
-  $('#notices').innerHTML = ns.length ? `<h2>Country-wide notices</h2><div class="card">${ns.map(z => zrow(z, esc(z.text.slice(0, 90)) + (z.text.length > 90 ? '…' : ''), '', '')).join('')}</div>` : '';
+  $('#notices').innerHTML = ns.length ? `<h2>Active NOTAMs without a mapped area</h2><div class="card">${ns.map(z => zrow(z, esc(z.text.slice(0, 90)) + (z.text.length > 90 ? '…' : ''), '', '')).join('')}</div>` : '';
 }
 
 /* ================================================================ side view (cone) */
@@ -390,7 +392,7 @@ function openDetail(k, at, fromSpot) {
   else if (g?.kind === 'polygon') rows.push(['Shape', z.matched ? 'Sport bubble named in this NOTAM (matched by location — check the text)' : `Area${g.approx ? ' (approximate)' : ''}`]);
   else if (g?.kind === 'line') rows.push(['Shape', z.approval ? 'Route · controller approval only' : 'Route']);
   else if (g?.kind === 'point') { rows.push(['Position', `${g.ring[0][0].toFixed(5)}, ${g.ring[0][1].toFixed(5)}`]); if (z.wind_text) rows.push(['Wind', esc(z.wind_text)]); if (z.elev_m) rows.push(['Elevation', `${z.elev_m} m`]); }
-  else rows.push(['Shape', 'Whole country / no map shape']);
+  else rows.push(['Shape', z.area_note || 'Whole country / no map shape']);
   if (z.days) rows.push(['Days', z.days.length === 7 ? 'Every day' : z.days.map(d => DOW[d]).join(' · ')]);
   let timeHtml = '';
   if (z.source === 'NOTAM') {
@@ -405,6 +407,10 @@ function openDetail(k, at, fromSpot) {
   if (z.contact) rows.push(['Coordinate with', esc(z.contact)]);
   if (z.source?.startsWith('eAIP') && z.text) rows.push(['Activity (AIP)', esc(z.text)]);
   rows.push(['Source', esc(z.source)]);
+  rows.push(['Accuracy', z.source === 'OpenStreetMap' ? 'Community data (OpenStreetMap) — check with the local club'
+    : /chart/.test(z.source) ? 'Traced from the official AIP chart (about ±0.4 km)'
+    : z.layer === 'nature_reserve' ? 'Height limit official (AIP appendix E); outline from OpenStreetMap'
+    : z.area_note ? z.area_note : 'Official published coordinates']);
   const others = (at ? zonesAtLL(at) : []).filter(o => o._k !== z._k).slice(0, 8);
   const M = Math.max(ce(z) >= UNL ? 20000 : ce(z), 2000) * 1.1, pct = a => 100 - Math.min(a, M) / M * 100;
   const tower = isArea(z) ? `<div class="tower"><i style="top:${pct(Math.min(ce(z), M))}%;bottom:${100 - pct(fl(z))}%;background:${m.c}"></i>${p ? `<i style="top:${pct(alt)}%;height:3px;background:var(--blue)"></i>` : ''}</div>` : '';
@@ -435,6 +441,7 @@ const GROUPS_AT = [
   ['No-fly & restricted', ['aip_prohibited', 'aip_uas', 'aip_restricted', 'aip_danger', 'aip_obst']],
   ['Controlled airspace', ['aip_ctr', 'aip_atz', 'aip_tma', 'aip_other']],
   ['Active NOTAMs', ['notam_restr', 'notam_para', 'notam_uas', 'notam_obst', 'notam_sport', 'notam_airspace', 'notam_route', 'notam_ifr']],
+  ['Nature reserves', ['nature_reserve']],
   ['Sport aviation', ['sport_bubble_all', 'sport_bubble_end']],
   ['Your files', ['custom']]];
 function distM(a, b) { const dx = (a[1] - b[1]) * 111320 * Math.cos(a[0] * Math.PI / 180), dy = (a[0] - b[0]) * 111320; return Math.hypot(dx, dy); }
@@ -770,8 +777,7 @@ document.addEventListener('click', e => { if (!e.target.closest('#stylePop,#styl
 function setCollapsed(c) { $('#sheet').classList.toggle('collapsed', c); document.body.classList.toggle('panel-hidden', c); store.set('collapsed', c); setTimeout(() => map.invalidateSize(), 320); }
 $('#collapse').onclick = () => setCollapsed(true);
 $('#panelBtn').onclick = () => setCollapsed(false);
-$('#approxSw').checked = showApprox;
-$('#approxSw').onchange = e => { showApprox = e.target.checked; store.set('approx', showApprox); render(); };
+
 $$('[data-x]').forEach(b => b.onclick = () => doExport(b.dataset.x));
 $('#cust').onchange = async e => {
   const f = e.target.files[0]; if (!f) return; const t = await f.text(), ext = f.name.split('.').pop().toLowerCase();
