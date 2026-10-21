@@ -1,0 +1,10 @@
+{
+  "name": "Israel Airspace",
+  "short_name": "Airspace",
+  "description": "Live airspace, NOTAMs and sport-aviation map for Israel",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f2f2f7",
+  "theme_color": "#f2f2f7",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
