@@ -37,8 +37,8 @@ def _radius_m(txt):
 
 def _alts(head):
     """-> (floor_ft, ceil_ft) from header text of a P/R/D record."""
-    h = head.replace(',', '')
-    nums = [int(x.replace(' ', '')) for x in re.findall(r'(?<![\d.])\d{1,2}(?: \d{3})(?![\d.])|(?<![\d.])\d{3,5}(?![\d.])', h)]
+    h = re.sub(r'\(\s*-\s*\)\s*(\d)', r'-\1', head.replace(',', ''))
+    nums = [int(x.replace(' ', '')) for x in re.findall(r'-?(?<![\d.])\d{1,2}(?: \d{3})(?![\d.])|-?(?<![\d.])\d{3,5}(?![\d.])', h)]
     gnd = 'GND' in h
     ceil = 99999 if UNLR.search(h) else (nums[0] if nums else None)
     floor = 0 if gnd else (nums[1] if len(nums) > 1 else 0)

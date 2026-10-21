@@ -34,6 +34,22 @@ def wind_sectors(tags):
     return out
 
 
+def overpass(query, log=print, timeout=180):
+    for ep in ENDPOINTS:
+        try:
+            req = urllib.request.Request(ep, data=urllib.parse.urlencode({'data': query}).encode(), headers={'User-Agent': UA})
+            return json.loads(urllib.request.urlopen(req, timeout=timeout).read())['elements']
+        except Exception as e:
+            log(f'  overpass {ep}: {e}')
+            if shutil.which('curl'):
+                try:
+                    out = subprocess.run(['curl', '-s', '-m', str(timeout), '-A', UA, '--data-urlencode', 'data=' + query, ep], capture_output=True, timeout=timeout + 30).stdout
+                    return json.loads(out)['elements']
+                except Exception as e2:
+                    log(f'  overpass via curl {ep}: {e2}')
+    raise RuntimeError('Overpass unavailable')
+
+
 def fetch(cache_path, max_age_days=7, log=print):
     cache = None
     try: cache = json.load(open(cache_path))

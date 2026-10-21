@@ -197,5 +197,4 @@ body.panel-hidden #panelBtn{display:grid!important}
 
 #search{border-top:1px solid var(--sep);border-radius:0}
 #search .bar{padding:8px 16px 4px}
-.searchrow{position:relative;z-index:9}
-#sheet.searching .searchrow{box-shadow:0 0 0 2px var(--blue)}
+#sheet.searching .searchrow{position:relative;z-index:9;box-shadow:0 0 0 2px var(--blue)}

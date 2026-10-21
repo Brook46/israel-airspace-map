@@ -12,7 +12,7 @@ Sources
 Needs:  pip install pymupdf   (only for the domestic AIP PDF)
 """
 import json, os, re, sys, time, traceback, urllib.parse, urllib.request
-from sources import notam, eaip, domestic, charts, custom, osm_sites, purpose
+from sources import notam, eaip, domestic, charts, custom, osm_sites, purpose, reserves
 from sources.geometry import UNL
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -132,6 +132,23 @@ def match_bubble_closures(nz, dz):
     return out
 
 
+UNSUPPORTED = ('קטום', 'חצי מעגל', 'לאורך הגבול', 'לאורך כביש', 'לאורך קו', 'לאורך תוואי', 'לאורך מסילת')
+
+
+def reliable(z):
+    """Only official, exactly-defined shapes go on the map."""
+    g = z.get('geom')
+    if not g: return True
+    if g.get('approx'):                                   # NOTAM without a published shape (Q-line reference circle)
+        z['geom'] = None; z['area_note'] = 'No exact area published in the NOTAM'; return True
+    if z.get('source') == 'Domestic AIP' and z['layer'] in ('aip_prohibited', 'aip_restricted', 'aip_danger'):
+        raw = z.get('raw', '') + ' ' + z.get('desc_he', '')
+        if any(w in raw for w in UNSUPPORTED): return False   # boundary follows a road/border/half-circle we cannot reproduce exactly
+        lo, hi = z.get('floor_ft'), z.get('ceil_ft')
+        if lo is not None and hi is not None and hi < UNL and hi <= lo and not (hi < 0): return False
+    return True
+
+
 def rnd(z):
     g = z.get('geom')
     if g:
@@ -191,7 +208,6 @@ def main(force=False):
     except Exception as e:
         traceback.print_exc(); nz = keep('notam', f'failed: {e}')
 
-    nz = match_bubble_closures(nz, dz)
 
     # ---- paragliding sites (OpenStreetMap)
     try:
@@ -203,12 +219,24 @@ def main(force=False):
         traceback.print_exc(); oz = keep('osm', f'failed: {e}')
     dz = dz + oz
 
+    # ---- nature reserves (official AIP list + OSM outlines)
+    try:
+        rz = reserves.build(D('cache', 'domestic_aip.pdf'), D('cache', 'osm_reserves.json'), log=log)
+        for z in rz: z['_src'] = 'reserves'
+        src['reserves'] = {'ok': True, 'msg': f'{len({z["id"] for z in rz})} reserves / parks / nesting sites with an outline', 'updated': time.time()}
+    except Exception as e:
+        traceback.print_exc(); rz = keep('reserves', f'failed: {e}')
+    dz = dz + rz
+
     # ---- custom files
     cz = custom.load_dir(D('custom'))
     for z in cz: z['_src'] = 'custom'
     if cz: src['custom'] = {'ok': True, 'msg': f'{len(cz)} zones from data/custom', 'updated': time.time()}
 
-    zones = [rnd(z) for z in ez + dz + nz + cz]
+    allz = ez + dz + nz + cz
+    zones = [rnd(z) for z in allz if reliable(z)]
+    dropped = len(allz) - len(zones)
+    if dropped: log(f'  left out {dropped} shapes that could not be reproduced exactly')
     out = {'generated': int(time.time()), 'airac': airac, 'domestic_aip': dom_name, 'sources': src, 'zones': zones}
     os.makedirs(os.path.dirname(OUT), exist_ok=True); jsave(OUT, out)
     log(f'wrote {OUT}: {len(zones)} zones in {time.time() - t0:.1f}s', {k: v["msg"] for k, v in src.items()})
