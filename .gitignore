@@ -1,0 +1,4 @@
+data/cache/
+web/data.json
+__pycache__/
+*.pyc

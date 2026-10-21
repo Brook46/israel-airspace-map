@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Israel Airspace</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg"><link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head><body>
+<div id="map"></div>
+
+<aside id="sheet" class="s2">
+  <div id="grab"><i></i></div>
+  <div class="head">
+    <h1>Airspace</h1>
+    <button class="chip" id="stat" title="Data status">Loading…</button>
+    <button class="ibtn" id="collapse" aria-label="Hide panel" title="Hide panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+    <button class="ibtn" id="upd" aria-label="Update now"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg></button>
+  </div>
+  <div class="searchrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Search zones, NOTAMs, takeoffs, places…" autocomplete="off" enterkeyhint="search"></div>
+  <div class="profiles" id="profiles"></div>
+  <div class="tabs">
+    <div class="seg" id="when" style="margin-bottom:8px"><button data-w="now">Now</button><button data-w="at">Plan a date &amp; time</button></div>
+    <div id="planrow" class="planrow"><input type="datetime-local" id="planAt" aria-label="Planned date and time"><div class="qchips"><button class="pill" data-q="3h">+3 h</button><button class="pill" data-q="tom">Tomorrow 09:00</button><button class="pill" data-q="fri">Fri 10:00</button><button class="pill" data-q="sat">Sat 10:00</button></div></div>
+    <div class="seg" id="tabs"><button data-t="here" class="on">Here</button><button data-t="layers">Layers</button><button data-t="export">Export</button></div>
+  </div>
+
+  <div class="body">
+    <section class="pane on" id="p-here">
+      <div id="banner"></div>
+      <div id="notices"></div>
+      <h2>Altitude</h2>
+      <div class="card" style="padding:12px 14px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <div class="altnum"><span id="altv">0</span><small>ft</small></div><div class="sub" id="altm">0 m</div>
+        </div>
+        <input type="range" id="alt" min="0" max="12000" step="50" value="0" aria-label="Altitude">
+        <div class="btnrow" style="margin-top:2px"><button class="btn sec" id="altGps">Use GPS altitude</button><button class="btn sec" id="altGnd">Ground</button></div>
+        <div class="sub" style="margin-top:8px">GPS gives height above sea level (AMSL). Limits marked AGL depend on the terrain below you.</div>
+      </div>
+      <h2>Zones at this point</h2>
+      <div class="card" id="zlist"></div>
+      <h2>Ahead of you</h2>
+      <div class="card" id="ahead"></div>
+      <h2>Side view</h2>
+      <div class="card" style="padding:12px 12px 10px">
+        <div class="sub" id="sumline" style="margin:0 2px 6px;font-weight:600"></div>
+        <svg id="sv" viewBox="0 0 340 238" role="img" aria-label="Side view of airspace ahead"></svg>
+        <div class="svnote" id="svnote">Tap or drag the chart to inspect a spot. Bars show every zone inside the cone.</div>
+        <div class="sub" style="margin:8px 2px 4px">Cone</div>
+        <div class="seg" id="scone"><button data-v="30">Narrow 30°</button><button data-v="90">Wide 90°</button><button data-v="360">All around</button></div>
+        <div class="sub" style="margin:10px 2px 4px">Look ahead</div>
+        <div class="seg" id="smin"><button data-v="5">5 min</button><button data-v="10">10 min</button><button data-v="20">20 min</button><button data-v="30">30 min</button></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+          <span class="sub" style="width:96px">Speed <b id="spdv" style="color:var(--label)">100</b> km/h</span>
+          <input type="range" id="spd" min="15" max="400" step="5" value="100" style="margin:8px 0" aria-label="Speed">
+          <button class="pill" id="spdAuto" style="padding:5px 10px">Auto</button>
+        </div>
+        <div class="sub" style="margin:6px 2px 4px">Height range</div>
+        <div class="seg" id="smax"><button data-v="3000">3k ft</button><button data-v="10000">10k ft</button><button data-v="45000">45k ft</button></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+          <span class="sub" style="width:96px">Direction <b id="hdg" style="color:var(--label)">000° N</b></span>
+          <input type="range" id="head" min="0" max="359" value="0" style="margin:8px 0" aria-label="Direction">
+        </div>
+        <div class="btnrow" style="margin-top:2px"><button class="btn sec" id="hdgGps">Use my heading</button></div>
+      </div>
+      <div class="note">Tap the map to drop a pin; tap a zone for its details. Double-click or long-press a zone to zoom to it.</div>
+      <div class="btnrow"><button class="btn sec" id="clearPin">Use my location</button></div>
+    </section>
+
+    <section class="pane" id="p-layers">
+      <h2>Profile</h2>
+      <div class="card" style="padding:12px 14px"><div id="profnote" style="font-size:14px"></div><ul id="rules" class="rules"></ul></div>
+      <h2>Heights</h2>
+      <div class="card" style="padding:12px 14px">
+        <div style="display:flex;align-items:center;justify-content:space-between"><b id="bandv" style="font-size:17px">0 – 5,000 ft</b><button class="pill" id="bandReset">Profile default</button></div>
+        <div class="sub" style="margin-top:6px">From</div><input type="range" id="blo" min="0" max="20000" step="500" value="0" aria-label="From height">
+        <div class="sub">To</div><input type="range" id="bhi" min="500" max="20500" step="500" value="5000" aria-label="To height">
+        <div class="sub">Shows zones that overlap this height range. The far right of "To" means unlimited.</div>
+      </div>
+      <div id="layerlist"></div>
+      <div id="hiddenlist"></div>
+      <h2>Map style</h2>
+      <div class="seg stylesel"><button data-s="auto">Auto</button><button data-s="day">Day</button><button data-s="night">Night</button><button data-s="sat">Satellite</button></div>
+      <div class="card" style="margin-top:10px"><label class="row"><span class="grow"><div>Approximate NOTAM areas as circles</div><div class="sub">Off: NOTAMs without an exact shape show as a small N pin (less clutter)</div></span><input class="sw" type="checkbox" id="approxSw"></label></div>
+      <h2>Data</h2>
+      <div class="card" id="sources"></div>
+    </section>
+
+    <section class="pane" id="p-export">
+      <h2>Export what you see</h2>
+      <div class="card">
+        <div class="row"><div class="grow"><b>KML</b><div class="sub">Google Earth, OziExplorer, most EFB apps</div></div><button class="btn sec" data-x="kml">Download</button></div>
+        <div class="row"><div class="grow"><b>KMZ</b><div class="sub">Zipped KML</div></div><button class="btn sec" data-x="kmz">Download</button></div>
+        <div class="row"><div class="grow"><b>OpenAir</b><div class="sub">XCSoar, SeeYou, XCTrack, flight instruments</div></div><button class="btn sec" data-x="txt">Download</button></div>
+        <div class="row"><div class="grow"><b>GeoJSON</b><div class="sub">QGIS and web maps</div></div><button class="btn sec" data-x="geojson">Download</button></div>
+      </div>
+      <div class="note" id="exportnote"></div>
+      <h2>Add your own airspace</h2>
+      <div class="card" style="padding:12px 14px"><input type="file" id="cust" accept=".txt,.air,.openair,.geojson,.json,.kml"><div class="sub" id="custst" style="margin-top:6px">OpenAir, GeoJSON or KML. Kept in this browser only.</div></div>
+      <div class="note">Informational only. Always check the official AIP and NOTAMs before flight.</div>
+    </section>
+  </div>
+
+  <div id="detail" class="overlay"><div class="bar"><button class="back" data-close><svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M10 2 2 10l8 8"/></svg>Back</button></div><div class="obody" id="dbody"></div></div>
+  <div id="spot" class="overlay"><div class="bar"><button class="back" data-close><svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M10 2 2 10l8 8"/></svg>Close</button></div><div class="obody" id="spotbody"></div></div>
+  <div id="search" class="overlay"><div class="bar"><b style="flex:1;font-size:17px">Search</b><button class="back" data-close>Done</button></div><div class="obody" id="results"></div></div>
+</aside>
+
+<div id="fab">
+  <button id="panelBtn" aria-label="Show panel" title="Show panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></button>
+  <button id="styleBtn" aria-label="Map style" title="Map style"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5 9-5z"/><path d="m3 13 9 5 9-5"/></svg></button>
+  <div id="stylePop" class="pop"><div class="seg stylesel vert"><button data-s="auto">Auto</button><button data-s="day">Day</button><button data-s="night">Night</button><button data-s="sat">Satellite</button></div></div>
+  <button id="loc" aria-label="My location"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 3 3 10.5l7 2.5 2.5 7z"/></svg></button>
+</div>
+<div id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
+</body></html>

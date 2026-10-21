@@ -1,0 +1,35 @@
+# Refreshes the data every 30 minutes and publishes web/ to GitHub Pages (HTTPS -> GPS works on phones).
+# One-time setup: repository Settings -> Pages -> Source: "GitHub Actions".
+name: Update airspace
+on:
+  schedule: [{ cron: '*/30 * * * *' }]
+  workflow_dispatch:
+  push: { branches: [main] }
+permissions: { contents: read, pages: write, id-token: write }
+concurrency: { group: pages, cancel-in-progress: false }
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -r requirements.txt
+      - name: Restore caches (AIP PDF, parsed charts, NOTAM details, last data.json)
+        uses: actions/cache@v4
+        with:
+          path: |
+            data/cache
+            web/data.json
+          key: airspace-${{ github.run_id }}
+          restore-keys: airspace-
+      - run: python update.py
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: web }
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: { name: github-pages, url: '${{ steps.d.outputs.page_url }}' }
+    steps:
+      - id: d
+        uses: actions/deploy-pages@v4
