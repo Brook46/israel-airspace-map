@@ -92,6 +92,16 @@ const PROFILES = {
   all: { name: 'Everything', speed: 100, lo: 0, hi: null, when: 'any', layers: null, note: 'Every layer at every height.', rules: [] },
 };
 
+const PICON = {
+  para: '<path d="M3 9c3-5 15-5 18 0"/><path d="M4 9l8 9.5L20 9M8.5 9.7 12 18.5l3.5-8.8"/><circle cx="12" cy="20" r="1.4" fill="currentColor"/>',
+  ppg: '<path d="M4 6.5c2.8-4 13.2-4 16 0"/><path d="M5 6.5l7 7.5 7-7.5"/><circle cx="12" cy="17.5" r="3.8"/><path d="M12 13.7v7.6M8.2 17.5h7.6"/>',
+  ul: '<path d="M2 9.5 12 5l10 4.5L12 11z"/><path d="M12 11v4.5M7.5 19h9M12 15.5 8 19M12 15.5l4 3.5"/><circle cx="7.5" cy="19.6" r="1.3"/><circle cx="16.5" cy="19.6" r="1.3"/>',
+  ga: '<path d="M21 15.5v-2l-8-4.8V3.8a1.5 1.5 0 0 0-3 0v4.9l-8 4.8v2l8-2.4v4.8l-2.2 1.6v1.6l3.7-1 3.7 1v-1.6L13 17.9v-4.8z" fill="currentColor" stroke="none"/>',
+  uas: '<circle cx="5.5" cy="5.5" r="2.6"/><circle cx="18.5" cy="5.5" r="2.6"/><circle cx="5.5" cy="18.5" r="2.6"/><circle cx="18.5" cy="18.5" r="2.6"/><rect x="9" y="9" width="6" height="6" rx="1.6"/><path d="M7.4 7.4 9 9M16.6 7.4 15 9M7.4 16.6 9 15M16.6 16.6 15 15"/>',
+  custom: '<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
+  all: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.3 3 14.7 0 18M12 3c-3 3.3-3 14.7 0 18"/>',
+};
+const picon = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${PICON[k] || PICON.all}</svg>`;
 /* ================================================================ state */
 let DATA = { zones: [] }, zones = [], loaded = false;
 let prof = store.get('prof', 'para'), when = store.get('when', null), band = store.get('band', null);
@@ -522,6 +532,7 @@ function buildHidden() {
 }
 function buildProfiles() {
   $('#tbProfileName').textContent = P().name; $('#profname').textContent = P().name;
+  $('#tbProfile svg').outerHTML = picon(prof);
   $('#profnote').textContent = P().note;
   $('#rules').innerHTML = P().rules.map(r => `<li>${esc(r)}</li>`).join('') + (P().rules.length ? '<li class="src">Summary of the domestic AIP (procedures B-08 / B-10). The AIP text governs.</li>' : '');
 }
@@ -805,7 +816,7 @@ function showMenu(anchor, title, items) {   // items: [{label, sub, on, icon, ac
 function closeMenu() { menu.classList.remove('on'); }
 document.addEventListener('click', e => { if (!e.target.closest('#menu,#toolbar')) closeMenu(); });
 $('#tbProfile').onclick = e => { e.stopPropagation(); if (menu.classList.contains('on') && menu.dataset.k === 'p') return closeMenu(); menu.dataset.k = 'p';
-  showMenu($('#tbProfile'), 'Profile', Object.entries(PROFILES).map(([k, v]) => ({ label: v.name, sub: v.lo != null && v.hi != null ? `${v.lo.toLocaleString('en-US')}–${v.hi.toLocaleString('en-US')} ft` : k === 'custom' ? 'your own layers & heights' : 'all heights', on: k === prof, act: () => applyProfile(k) })));
+  showMenu($('#tbProfile'), 'Profile', Object.entries(PROFILES).map(([k, v]) => ({ icon: picon(k), label: v.name, sub: v.lo != null && v.hi != null ? `${v.lo.toLocaleString('en-US')}–${v.hi.toLocaleString('en-US')} ft` : k === 'custom' ? 'your own layers & heights' : 'all heights', on: k === prof, act: () => applyProfile(k) })));
 };
 $('#tbTime').onclick = e => { e.stopPropagation(); if (menu.classList.contains('on') && menu.dataset.k === 't') return closeMenu(); menu.dataset.k = 't';
   const d = new Date(), tom = (d.setHours(9, 0, 0, 0), d.getTime() + DAY);
@@ -815,7 +826,7 @@ $('#tbTime').onclick = e => { e.stopPropagation(); if (menu.classList.contains('
     { label: 'Tomorrow 09:00', on: false, act: () => setAt(tom) },
     { label: 'Friday 10:00', on: false, act: () => setAt(nextDow(5, 10)) },
     { label: 'Saturday 10:00', on: false, act: () => setAt(nextDow(6, 10)) },
-    { html: `<label class="mi pick"><span>Pick date &amp; time<small>${when === 'at' && atTime ? 'now set to ' + esc(fmtT(atTime)) : 'plan up to a month ahead'}</small></span></label><input type="datetime-local" id="planAt" value="${toLocalInput(atTime || Date.now() + 3 * 3600000)}">` }]);
+    { html: `<label class="mi pick"><span>Pick date &amp; time<small>${when === 'at' && atTime ? 'now set to ' + esc(fmtT(atTime)) : 'plan up to a month ahead'}</small></span></label><div class="pickwrap"><input type="datetime-local" id="planAt" value="${toLocalInput(atTime || Date.now() + 3 * 3600000)}"></div>` }]);
   $('#planAt').onchange = ev => { const t = new Date(ev.target.value).getTime(); if (!isNaN(t)) { setAt(t); closeMenu(); } };
 };
 $('#tbSearch').onclick = () => { closeMenu(); if (panelOpen() && $('#search').classList.contains('on')) { closeOverlay('#search'); return closePanel(); } openSearch(); };
