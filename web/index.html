@@ -95,6 +95,13 @@
       <div class="note" id="exportnote"></div>
       <h2>Add your own airspace</h2>
       <div class="card" style="padding:12px 14px"><input type="file" id="cust" accept=".txt,.air,.openair,.geojson,.json,.kml"><div class="sub" id="custst" style="margin-top:6px">OpenAir, GeoJSON or KML. Kept in this browser only.</div></div>
+      <h2>Live traffic</h2>
+      <div class="card">
+        <div class="row"><span class="grow"><div>Status</div><div class="sub" id="trstat">—</div></span></div>
+        <label class="row"><span class="grow"><div>Show traffic at all altitudes</div><div class="sub">Off: only traffic within your profile heights (±500 ft)</div></span><input class="sw" type="checkbox" id="trAll"></label>
+        <div class="row" style="display:block"><div>Traffic relay URL</div><div class="sub" style="margin:2px 0 6px">Leave empty when running serve.py. For the hosted site, paste your relay address (README → “Live traffic on the phone”).</div><input id="trUrl" type="url" placeholder="https://…/traffic" style="width:100%;font:inherit;padding:8px 10px;border-radius:10px;border:0;background:var(--fill);color:var(--label)"></div>
+      </div>
+      <div class="note">Aircraft: ADS-B from community receivers (adsb.fi / adsb.lol). Gliders, paragliders, hang gliders: FLARM / OGN / FANET trackers via the Open Glider Network. Drones broadcast Remote ID only over local radio, so there is no public live feed for them.</div>
       <h2>Data sources</h2>
       <div class="card" id="sources"></div>
       <div class="note">Informational only. Always check the official AIP and NOTAMs before flight.</div>

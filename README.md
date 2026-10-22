@@ -30,6 +30,19 @@ with the last data it loaded (the app shows how old the data is).
 If the IAA site ever blocks GitHub's servers, the Data section in the app shows the NOTAM source as failed and keeps
 the last good data; run `serve.py` at home instead.
 
+## Live traffic
+The **Live traffic** layer shows aircraft in the air near you, filtered to your profile heights (or all altitudes):
+* ADS-B (airliners, GA, helicopters, some ultralights) from community receivers — adsb.fi, fallback adsb.lol.
+* FLARM / OGN / FANET trackers (gliders, paragliders, hang gliders, tow planes) from the Open Glider Network.
+* Drones: no public live source exists (Remote ID is local radio only). Drone activity shows through NOTAMs and drone areas.
+
+These services do not allow direct use from a web page, so the app reads them through a relay:
+* **On your computer:** `python3 serve.py` already includes it (ADS-B + OGN).
+* **On the phone (hosted site):** deploy `deploy/traffic-worker.js` as a free Cloudflare Worker (instructions at the top of the
+  file) and paste its URL into the app: More → Live traffic → Traffic relay URL. This relays ADS-B; OGN needs `serve.py`.
+
+Coverage is partial and positions can lag; never use it for separation.
+
 ## Where the data comes from
 | Data | Source | Refresh |
 |---|---|---|

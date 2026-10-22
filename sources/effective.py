@@ -55,6 +55,9 @@ def effective(z):
     if src == 'NOTAM': return None                      # NOTAM cards show validity, schedule and next active times
     if L == 'uas_area': return 'Not permanent — only when drone activity is coordinated / published by NOTAM. Check active NOTAMs.'
     if L in ('sport_bubble_all', 'sport_bubble_end', 'sport_route_mid', 'sport_route_end', 'sport_route_special'):
+        wf = z.get('weekend_from', 6)
+        if z.get('days') == [5, 6]: return f'Weekends: Friday from {wf:02d}:00, holiday eves from 14:00, Saturdays and holidays all day (B-08)'
+        if z.get('days') == [0, 1, 2, 3, 4]: return f'Midweek: Sunday to Friday {wf:02d}:00; holiday weekdays (chol hamoed) count as midweek (B-08)'
         return _cap(f"{_days(z.get('days'))} (sport-aviation chart)")
     if L in ('aip_ctr', 'aip_atz') and z.get('from_chart'):
         return _cap(f"{_days(z.get('days'))} (CVFR chart" + (', a smaller CTR applies on weekends)' if z.get('days') == [0, 1, 2, 3, 4] else ')'))

@@ -234,6 +234,13 @@ def main(force=False):
     if cz: src['custom'] = {'ok': True, 'msg': f'{len(cz)} zones from data/custom', 'updated': time.time()}
 
     allz = ez + dz + nz + cz
+    # B-08: weekend starts Friday 06:00, except these bubbles (and the Hatzerim / Kedem routes) at 12:00 or 14:00
+    W14 = ('שדרות דרו', 'באר שבע', 'מיתר', 'להבי')
+    W12 = ('שדרות צפו', 'ניצני', 'ים המלח', 'זוהר', 'בועת של', 'אורן')
+    for z in allz:
+        if z['layer'] in ('sport_bubble_end', 'sport_bubble_all', 'sport_route_end', 'sport_route_mid'):
+            nm = z.get('name', '')
+            z['weekend_from'] = 14 if any(w in nm for w in W14) else 12 if any(w in nm for w in W12) else 6
     for z in allz:
         e = effective.effective(z)
         if e: z['effective'] = e

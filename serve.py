@@ -9,6 +9,7 @@ Options: --port N, --every MINUTES (default 10)
 import argparse, json, os, socket, ssl, threading, time, traceback
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 import update
+from sources import traffic
 
 ROOT = os.path.dirname(os.path.abspath(__file__)); WEB = os.path.join(ROOT, 'web')
 lock = threading.Lock(); status = {'running': False, 'last': None, 'error': None}
@@ -32,10 +33,11 @@ class H(SimpleHTTPRequestHandler):
         super().end_headers()
 
     def _json(self, code, obj):
-        b = json.dumps(obj).encode(); self.send_response(code); self.send_header('Content-Type', 'application/json'); self.send_header('Content-Length', str(len(b))); self.end_headers(); self.wfile.write(b)
+        b = json.dumps(obj).encode(); self.send_response(code); self.send_header('Content-Type', 'application/json'); self.send_header('Access-Control-Allow-Origin', '*'); self.send_header('Content-Length', str(len(b))); self.end_headers(); self.wfile.write(b)
 
     def do_GET(self):
         if self.path.startswith('/api/status'): return self._json(200, status)
+        if self.path.startswith('/api/traffic'): return self._json(200, traffic.snapshot())
         return super().do_GET()
 
     def do_POST(self):
@@ -58,6 +60,7 @@ if __name__ == '__main__':
     if not os.path.exists(os.path.join(WEB, 'data.json')): print('First run: collecting data (the domestic AIP PDF is ~95 MB)…'); run_update()
     else: threading.Thread(target=run_update, daemon=True).start()
     threading.Thread(target=loop, args=(a.every,), daemon=True).start()
+    traffic.start_ogn()
     srv = ThreadingHTTPServer(('0.0.0.0' if a.lan else '127.0.0.1', a.port), H)
     scheme = 'http'
     if a.cert:
