@@ -120,7 +120,7 @@ function applyStyle(s) {
   else { if (map.hasLayer(SAT)) map.removeLayer(SAT); if (!map.hasLayer(OSM)) OSM.addTo(map); }
   const pane = OSM.getContainer(); if (pane) { pane.classList.toggle('tiles-dark', theme !== 'sat' && night); pane.classList.toggle('tiles-soft', theme !== 'sat' && !night); }
   $('#map').classList.toggle('sat', theme === 'sat');
-  $$('.stylesel button').forEach(b => b.classList.toggle('on', b.dataset.s === theme));
+  $$('.stylesel button, .stylesel-i').forEach(b => b.classList.toggle('on', b.dataset.s === theme));
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', night ? '#1c1c1e' : '#f2f2f7');
 }
 OSM.on('load', () => applyStyle());
@@ -261,7 +261,7 @@ map.on('zoomend', lbl);
 function zoomTo(z) {
   const b = z.geom.kind === 'point' ? [z.geom.ring[0][0] - .02, z.geom.ring[0][0] + .02, z.geom.ring[0][1] - .02, z.geom.ring[0][1] + .02] : bbox(z);
   map.fitBounds([[b[0], b[2]], [b[1], b[3]]], { padding: [70, 70], maxZoom: 14 });
-  if (innerWidth <= 760) setSheet('s1');
+  if (mobile()) setSheet('s0');
 }
 
 /* ================================================================ Here tab */
@@ -434,7 +434,7 @@ function openDetail(k, at, fromSpot) {
   openOverlay('#detail'); $('#dbody').scrollTop = 0;
 }
 const sheetEl = $('#sheet'); sheetEl.addEventListener('scroll', () => { if (sheetEl.scrollTop) sheetEl.scrollTop = 0; });   // the panel itself must never scroll
-function openOverlay(id) { sheetEl.scrollTop = 0; if ($('#sheet').classList.contains('collapsed')) setCollapsed(false); $(id).classList.add('on'); if (innerWidth <= 760 && $('#sheet').classList.contains('s1')) setSheet('s2'); }
+function openOverlay(id) { sheetEl.scrollTop = 0; if ($('#sheet').classList.contains('collapsed')) setCollapsed(false); $(id).classList.add('on'); if (mobile() && ['s0', 's1'].includes(curState())) setSheet('s2'); }
 function closeOverlay(id) {
   $(id).classList.remove('on');
   if (id === '#detail') { const s = selected; selected = null; if (s != null && shapes[s]?.setStyle) shapes[s].setStyle({ weight: 2, fillOpacity: .15 }); }
@@ -694,16 +694,22 @@ function parseKML(text, src) {
 }
 
 /* ================================================================ wiring */
-function setSheet(s) { const sh = $('#sheet'); sh.classList.remove('s1', 's2', 's3'); sh.classList.add(s); }
-$('#grab').onclick = () => { const sh = $('#sheet'); setSheet(sh.classList.contains('s2') ? 's3' : sh.classList.contains('s3') ? 's1' : 's2'); };
+function setSheet(s) { const sh = $('#sheet'); sh.classList.remove('s0', 's1', 's2', 's3'); sh.classList.add(s); store.set('sheet', s); setTimeout(() => map.invalidateSize(), 320); }
+const mobile = () => innerWidth <= 760;
+const STATES = ['s0', 's1', 's2', 's3'];
+const curState = () => STATES.find(s => $('#sheet').classList.contains(s)) || 's2';
+$('#grab').onclick = () => {   // tap the tab: collapse fully / open again
+  if (!mobile()) return setCollapsed(true);
+  setSheet(curState() === 's0' ? 's2' : 's0');
+};
 (() => {   // swipe the handle: down = show more map, up = show more panel
   let y0 = null; const g = $('#grab');
   g.addEventListener('touchstart', e => { y0 = e.touches[0].clientY; }, { passive: true });
   g.addEventListener('touchend', e => { if (y0 == null) return; const dy = e.changedTouches[0].clientY - y0; y0 = null; const sh = $('#sheet');
-    if (dy > 30) setSheet(sh.classList.contains('s3') ? 's2' : 's1'); else if (dy < -30) setSheet(sh.classList.contains('s1') ? 's2' : 's3'); });
+    const i = STATES.indexOf(curState()); if (dy > 30) setSheet(STATES[Math.max(0, i - 1)]); else if (dy < -30) setSheet(STATES[Math.min(3, i + 1)]); });
 })();
 $$('.overlay .bar').forEach(b => { const m = document.createElement('button'); m.className = 'back mapbtn'; m.innerHTML = 'Map <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
-  m.onclick = () => { if (innerWidth <= 760) setSheet('s1'); else setCollapsed(true); }; b.appendChild(m); });
+  m.onclick = () => { if (mobile()) setSheet('s0'); else setCollapsed(true); }; b.appendChild(m); });
 $$('#tabs button').forEach(b => b.onclick = () => { $$('#tabs button').forEach(x => x.classList.toggle('on', x === b)); $$('.pane').forEach(p => p.classList.toggle('on', p.id === 'p-' + b.dataset.t)); closeOverlay('#detail'); if (b.dataset.t === 'export') exportNote(); });
 $$('[data-close]').forEach(b => b.onclick = () => { const id = b.closest('.overlay').id; closeOverlay('#' + id); if (id === 'detail' && detailFromSpot && lastSpot) openOverlay('#spot'); else if (id === 'spot') clearPinIfNoGps(); if (id === 'search') { $('#q').value = ''; $('#q').blur(); $('#sheet').classList.remove('searching'); } });
 function clearPinIfNoGps() { /* keep the pin so the Here tab still works */ }
@@ -784,11 +790,10 @@ $$('.qchips [data-q]').forEach(b => b.onclick = () => { const q = b.dataset.q, d
 $('#blo').oninput = e => { const hi = +$('#bhi').value; setBand(+e.target.value, hi >= 20500 ? null : hi); };
 $('#bhi').oninput = e => setBand(+$('#blo').value, +e.target.value >= 20500 ? null : +e.target.value);
 $('#bandReset').onclick = () => { band = null; store.set('band', null); if (prof === 'custom') store.set('customBand', null); render(); };
-$$('.stylesel button').forEach(b => b.onclick = () => { applyStyle(b.dataset.s); $('#stylePop').classList.remove('on'); });
+$$('.stylesel button, .stylesel-i').forEach(b => b.onclick = () => { applyStyle(b.dataset.s); $('#stylePop').classList.remove('on'); });
 $('#styleBtn').onclick = e => { e.stopPropagation(); $('#stylePop').classList.toggle('on'); };
 document.addEventListener('click', e => { if (!e.target.closest('#stylePop,#styleBtn')) $('#stylePop').classList.remove('on'); });
 function setCollapsed(c) { $('#sheet').classList.toggle('collapsed', c); document.body.classList.toggle('panel-hidden', c); store.set('collapsed', c); setTimeout(() => map.invalidateSize(), 320); }
-$('#collapse').onclick = () => setCollapsed(true);
 $('#panelBtn').onclick = () => setCollapsed(false);
 
 $$('[data-x]').forEach(b => b.onclick = () => doExport(b.dataset.x));
@@ -804,5 +809,5 @@ setInterval(() => { if (document.visibilityState === 'visible') load(); }, 5 * 6
 setInterval(() => { if (loaded && when === 'now') render(); }, 60000);   // NOTAM windows roll over
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) navigator.serviceWorker.register('sw.js').catch(() => { });
 
-applyStyle(theme); setCollapsed(store.get('collapsed', false));
+applyStyle(theme); setCollapsed(!mobile() && store.get('collapsed', false)); if (mobile()) setSheet(store.get('sheet', 's2') === 's3' ? 's2' : store.get('sheet', 's2'));
 $('#head').value = sec.head; syncSpeed(); setAlt(alt, true); setWhen(when, true); buildProfiles(); drawSection(); startGeo(); load();

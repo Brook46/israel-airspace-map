@@ -155,8 +155,6 @@ details.raw pre{white-space:pre-wrap;font:12px/1.4 ui-monospace,Menlo,monospace;
 
 /* map style + collapse */
 #fab{align-items:flex-end}
-#fab .pop{position:absolute;right:56px;bottom:52px;display:none;background:var(--glass);backdrop-filter:saturate(180%) blur(24px);-webkit-backdrop-filter:saturate(180%) blur(24px);box-shadow:var(--shadow);border-radius:14px;padding:6px;width:150px}
-#fab .pop.on{display:block}
 .seg.vert{flex-direction:column}.seg.vert button{padding:9px 10px;text-align:left}
 #panelBtn{display:none!important}
 body.panel-hidden #panelBtn{display:grid!important}
@@ -208,4 +206,34 @@ body.panel-hidden #panelBtn{display:grid!important}
   #sheet.s3{height:84vh}
   #grab{height:28px;cursor:grab;touch-action:none}
   #grab i{width:44px}
+}
+
+/* map-style menu (iOS context-menu look) */
+#stylePop{position:absolute;right:58px;bottom:54px;width:210px;display:none;padding:6px 0;border-radius:14px;
+  background:var(--glass);backdrop-filter:saturate(180%) blur(30px);-webkit-backdrop-filter:saturate(180%) blur(30px);box-shadow:0 12px 40px rgba(0,0,0,.28);border:.5px solid var(--sep)}
+#stylePop.on{display:block;animation:pop .16s ease-out}
+@keyframes pop{from{opacity:0;transform:scale(.92) translateY(6px)}to{opacity:1;transform:none}}
+#stylePop .mtitle{font-size:12px;font-weight:600;color:var(--label2);padding:4px 16px 6px;text-transform:uppercase;letter-spacing:.04em}
+#fab #stylePop .mi{display:flex;align-items:center;gap:12px;width:100%;height:auto;padding:11px 16px;font-size:16px;color:var(--label);text-align:left;border-radius:0;background:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;place-items:initial}
+#fab #stylePop .mi.on{background:none;color:var(--label)}
+#stylePop .mi+.mi{border-top:.5px solid var(--sep)}
+#stylePop .mi svg{width:20px;height:20px;color:var(--blue);flex:none}
+#stylePop .mi span{flex:1}
+#stylePop .mi i{font-style:normal;color:var(--blue);font-weight:700;visibility:hidden}
+#stylePop .mi.on i{visibility:visible}
+#fab #stylePop .mi:active{background:var(--fill)}
+
+/* panel tab: the only collapse control */
+#grab{display:flex!important;height:26px;cursor:pointer;touch-action:none;flex:none;position:relative;z-index:12}
+#grab i{width:44px;height:5px}
+@media (min-width:761px){#grab{height:18px}}
+@media (max-width:760px){
+  #sheet{height:46vh;max-height:calc(100dvh - 64px - env(safe-area-inset-top))}
+  #sheet.s0{height:calc(30px + env(safe-area-inset-bottom))}
+  #sheet.s1{height:150px}
+  #sheet.s3{height:calc(100dvh - 64px - env(safe-area-inset-top))}
+  #sheet.s0 .head,#sheet.s0 .searchrow,#sheet.s0 .profiles,#sheet.s0 .tabs,#sheet.s0 .body{visibility:hidden}
+  #sheet.s0~#fab{bottom:calc(44px + env(safe-area-inset-bottom))}
+  #sheet.s3~#fab{display:none}
+  #stylePop{bottom:54px}
 }
