@@ -521,8 +521,7 @@ function buildHidden() {
   $$('#hiddenlist [data-u]').forEach(b => b.onclick = () => { const z = zones.find(x => x._k == b.dataset.u); hidden.delete(zkey(z)); store.set('hidden', [...hidden]); render(); });
 }
 function buildProfiles() {
-  $('#profiles').innerHTML = Object.entries(PROFILES).map(([k, v]) => `<button class="pill ${k === prof ? 'on' : ''}" data-p="${k}">${v.name}</button>`).join('');
-  $$('#profiles .pill').forEach(b => b.onclick = () => applyProfile(b.dataset.p));
+  $('#tbProfileName').textContent = P().name; $('#profname').textContent = P().name;
   $('#profnote').textContent = P().note;
   $('#rules').innerHTML = P().rules.map(r => `<li>${esc(r)}</li>`).join('') + (P().rules.length ? '<li class="src">Summary of the domestic AIP (procedures B-08 / B-10). The AIP text governs.</li>' : '');
 }
@@ -534,14 +533,14 @@ function applyProfile(p) {
   buildProfiles(); render();
 }
 function setWhen(w, quiet) {
-  when = w; store.set('when', w); $$('#when button').forEach(b => b.classList.toggle('on', b.dataset.w === w));
-  $('#planrow').classList.toggle('on', w === 'at');
-  if (w === 'at') { if (!atTime || atTime < Date.now() - 3600000) setAt(Date.now() + 3 * 3600000, true); $('#planAt').value = toLocalInput(atTime); }
-  $('#when [data-w=at]').textContent = w === 'at' && atTime ? fmtT(atTime) : 'Plan a date & time';
+  when = w; store.set('when', w);
+  if (w === 'at' && (!atTime || atTime < Date.now() - 3600000)) setAt(Date.now() + 3 * 3600000, true);
+  timeLabel();
   if (!quiet && loaded) render();
 }
 const toLocalInput = t => { const d = new Date(t - new Date(t).getTimezoneOffset() * 60000); return d.toISOString().slice(0, 16); };
-function setAt(t, quiet) { atTime = Math.round(t / 60000) * 60000; store.set('atTime', atTime); $('#planAt').value = toLocalInput(atTime); $('#when [data-w=at]').textContent = fmtT(atTime); if (!quiet) render(); }
+function setAt(t, quiet) { atTime = Math.round(t / 60000) * 60000; store.set('atTime', atTime); when = 'at'; store.set('when', 'at'); timeLabel(); if (!quiet) render(); }
+function timeLabel() { const l = $('#tbTimeLabel'); l.textContent = when === 'at' && atTime ? new Date(atTime).toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : 'Now'; $('#tbTime').classList.toggle('plan', when === 'at'); }
 function nextDow(dow, hour) { const d = new Date(); d.setHours(hour, 0, 0, 0); let add = (dow - d.getDay() + 7) % 7; if (add === 0 && d.getTime() < Date.now()) add = 7; return d.getTime() + add * DAY; }
 function syncBand() { const b = bandNow(); $('#blo').value = b.lo; $('#bhi').value = b.hi == null ? 20500 : b.hi; $('#bandv').textContent = fmtBand(b); }
 function setBand(lo, hi) { if (hi != null && hi <= lo) hi = Math.min(lo + 500, 20000); toCustom(); band = { lo, hi }; saveCustom(); render(); }
@@ -696,7 +695,7 @@ function parseKML(text, src) {
 /* ================================================================ wiring */
 function setSheet(s) { const sh = $('#sheet'); sh.classList.remove('s0', 's1', 's2', 's3'); sh.classList.add(s); store.set('sheet', s); setTimeout(() => map.invalidateSize(), 320); }
 const mobile = () => innerWidth <= 760;
-const STATES = ['s0', 's1', 's2', 's3'];
+const STATES = ['s0', 's2', 's3'];
 const curState = () => STATES.find(s => $('#sheet').classList.contains(s)) || 's2';
 $('#grab').onclick = () => {   // tap the tab: collapse fully / open again
   if (!mobile()) return setCollapsed(true);
@@ -783,18 +782,45 @@ $('#spd').oninput = e => { sec.speed = +e.target.value; store.set('speed', sec.s
 $('#spdAuto').onclick = () => { sec.speed = null; store.set('speed', null); syncSpeed(); update(); };
 $('#sv').addEventListener('pointerdown', e => { svInspect(e); $('#sv').setPointerCapture(e.pointerId); $('#sv').onpointermove = svInspect; });
 $('#sv').addEventListener('pointerup', () => { $('#sv').onpointermove = null; });
-$$('#when button').forEach(b => b.onclick = () => setWhen(b.dataset.w));
-$('#planAt').onchange = e => { const t = new Date(e.target.value).getTime(); if (!isNaN(t)) setAt(t); };
-$$('.qchips [data-q]').forEach(b => b.onclick = () => { const q = b.dataset.q, d = new Date();
-  setAt(q === '3h' ? Date.now() + 3 * 3600000 : q === 'tom' ? (d.setHours(9, 0, 0, 0), d.getTime() + DAY) : q === 'fri' ? nextDow(5, 10) : nextDow(6, 10)); });
 $('#blo').oninput = e => { const hi = +$('#bhi').value; setBand(+e.target.value, hi >= 20500 ? null : hi); };
 $('#bhi').oninput = e => setBand(+$('#blo').value, +e.target.value >= 20500 ? null : +e.target.value);
 $('#bandReset').onclick = () => { band = null; store.set('band', null); if (prof === 'custom') store.set('customBand', null); render(); };
-$$('.stylesel button, .stylesel-i').forEach(b => b.onclick = () => { applyStyle(b.dataset.s); $('#stylePop').classList.remove('on'); });
-$('#styleBtn').onclick = e => { e.stopPropagation(); $('#stylePop').classList.toggle('on'); };
-document.addEventListener('click', e => { if (!e.target.closest('#stylePop,#styleBtn')) $('#stylePop').classList.remove('on'); });
+$$('.stylesel button').forEach(b => b.onclick = () => applyStyle(b.dataset.s));
 function setCollapsed(c) { $('#sheet').classList.toggle('collapsed', c); document.body.classList.toggle('panel-hidden', c); store.set('collapsed', c); setTimeout(() => map.invalidateSize(), 320); }
-$('#panelBtn').onclick = () => setCollapsed(false);
+
+/* ---------------- toolbar + menus */
+function openPanel(tab) {
+  if (mobile()) { if (curState() === 's0') setSheet('s2'); } else setCollapsed(false);
+  if (tab) { const b = $(`#tabs [data-t=${tab}]`); if (b) b.click(); }
+}
+const menu = $('#menu');
+function showMenu(anchor, title, items) {   // items: [{label, sub, on, icon, act}] or {html}
+  menu.innerHTML = `<div class="mtitle">${title}</div>` + items.map((it, i) => it.html ? it.html : `<button class="mi${it.on ? ' on' : ''}" data-i="${i}" role="menuitemradio">${it.icon || ''}<span>${esc(it.label)}${it.sub ? `<small>${esc(it.sub)}</small>` : ''}</span><i>✓</i></button>`).join('');
+  $$('#menu [data-i]').forEach(b => b.onclick = e => { e.stopPropagation(); closeMenu(); items[+b.dataset.i].act(); });
+  const r = anchor.getBoundingClientRect(), w = Math.min(260, innerWidth - 16);
+  menu.style.width = w + 'px'; menu.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + 'px';
+  menu.style.bottom = (innerHeight - r.top + 10) + 'px'; menu.classList.add('on');
+}
+function closeMenu() { menu.classList.remove('on'); }
+document.addEventListener('click', e => { if (!e.target.closest('#menu,#toolbar')) closeMenu(); });
+$('#tbProfile').onclick = e => { e.stopPropagation(); if (menu.classList.contains('on') && menu.dataset.k === 'p') return closeMenu(); menu.dataset.k = 'p';
+  showMenu($('#tbProfile'), 'Profile', Object.entries(PROFILES).map(([k, v]) => ({ label: v.name, sub: v.lo != null && v.hi != null ? `${v.lo.toLocaleString('en-US')}–${v.hi.toLocaleString('en-US')} ft` : k === 'custom' ? 'your own layers & heights' : 'all heights', on: k === prof, act: () => applyProfile(k) })));
+};
+$('#tbTime').onclick = e => { e.stopPropagation(); if (menu.classList.contains('on') && menu.dataset.k === 't') return closeMenu(); menu.dataset.k = 't';
+  const d = new Date(), tom = (d.setHours(9, 0, 0, 0), d.getTime() + DAY);
+  showMenu($('#tbTime'), 'Show airspace for', [
+    { label: 'Now', sub: 'live, updates every minute', on: when === 'now', act: () => setWhen('now') },
+    { label: 'In 3 hours', on: false, act: () => setAt(Date.now() + 3 * 3600000) },
+    { label: 'Tomorrow 09:00', on: false, act: () => setAt(tom) },
+    { label: 'Friday 10:00', on: false, act: () => setAt(nextDow(5, 10)) },
+    { label: 'Saturday 10:00', on: false, act: () => setAt(nextDow(6, 10)) },
+    { html: `<label class="mi pick"><span>Pick date &amp; time<small>${when === 'at' && atTime ? 'now set to ' + esc(fmtT(atTime)) : 'plan up to a month ahead'}</small></span></label><input type="datetime-local" id="planAt" value="${toLocalInput(atTime || Date.now() + 3 * 3600000)}">` }]);
+  $('#planAt').onchange = ev => { const t = new Date(ev.target.value).getTime(); if (!isNaN(t)) { setAt(t); closeMenu(); } };
+};
+$('#tbSearch').onclick = () => { closeMenu(); openPanel(); setTimeout(() => $('#q').focus(), 60); };
+const panelOpen = () => mobile() ? curState() !== 's0' : !$('#sheet').classList.contains('collapsed');
+function closePanel() { if (mobile()) setSheet('s0'); else setCollapsed(true); }
+$('#tbLayers').onclick = () => { closeMenu(); if (panelOpen() && $('#tabs .on')?.dataset.t === 'layers' && !$('.overlay.on')) return closePanel(); openPanel('layers'); };
 
 $$('[data-x]').forEach(b => b.onclick = () => doExport(b.dataset.x));
 $('#cust').onchange = async e => {
@@ -809,5 +835,6 @@ setInterval(() => { if (document.visibilityState === 'visible') load(); }, 5 * 6
 setInterval(() => { if (loaded && when === 'now') render(); }, 60000);   // NOTAM windows roll over
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) navigator.serviceWorker.register('sw.js').catch(() => { });
 
-applyStyle(theme); setCollapsed(!mobile() && store.get('collapsed', false)); if (mobile()) setSheet(store.get('sheet', 's2') === 's3' ? 's2' : store.get('sheet', 's2'));
+applyStyle(theme); setCollapsed(!mobile() && store.get('collapsed', false)); if (mobile()) setSheet(store.get('sheet', 's0') === 's3' ? 's2' : (store.get('sheet', 's0') === 's1' ? 's0' : store.get('sheet', 's0')));
+timeLabel();
 $('#head').value = sec.head; syncSpeed(); setAlt(alt, true); setWhen(when, true); buildProfiles(); drawSection(); startGeo(); load();
