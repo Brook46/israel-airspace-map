@@ -47,10 +47,11 @@ const META = {
   notam_route: { z: 9, g: 'NOTAMs', n: 'Route changes', t: 'NOTAM · route', c: '#32ade6' },
   notam_airspace: { g: 'NOTAMs', n: 'Airspace changes (CTR, training)', t: 'NOTAM · airspace', c: '#8e44d6' },
   notam_ifr: { g: 'NOTAMs', n: 'Aerodrome & IFR info', t: 'NOTAM · aerodrome / IFR', c: '#8e8e93' },
+  traffic: { g: 'Live traffic', n: 'Live traffic (ADS-B + FLARM/OGN)', t: 'Live traffic', c: '#0a84ff' },
   custom: { g: 'Your files', n: 'Imported airspace', t: 'Imported airspace', c: '#5e5ce6' },
 };
-const GROUPS = ['Paragliding sites', 'Sport aviation', 'Airspace', 'Nature', 'Routes & points', 'NOTAMs', 'Your files'];
-const CORE = ['aip_ctr', 'aip_atz', 'aip_tma', 'uas_area', 'aip_prohibited', 'aip_restricted', 'aip_danger', 'aip_uas', 'aip_obst', 'custom'];
+const GROUPS = ['Live traffic', 'Paragliding sites', 'Sport aviation', 'Airspace', 'Nature', 'Routes & points', 'NOTAMs', 'Your files'];
+const CORE = ['traffic', 'aip_ctr', 'aip_atz', 'aip_tma', 'uas_area', 'aip_prohibited', 'aip_restricted', 'aip_danger', 'aip_uas', 'aip_obst', 'custom'];
 const SPORT = ['sport_bubble_all', 'sport_bubble_end', 'sport_route_mid', 'sport_route_end', 'sport_route_special'];
 const N_SPORT = ['notam_restr', 'notam_para', 'notam_uas', 'notam_obst', 'notam_sport', 'notam_airspace'];
 const SITES = ['launch_site', 'landing_site'];
@@ -58,36 +59,58 @@ const PROFILES = {
   para: {
     name: 'Paraglider', speed: 35, lo: 0, hi: 6000, when: 'now',
     layers: [...CORE, ...SITES, 'cvfr_route', ...N_SPORT],
-    note: 'Free flight (no motor), 0–6,000 ft: takeoffs with their wind directions, landing fields, everything that can stop you at those heights (CTR/ATZ, prohibited, restricted, danger, no-fly circles), active NOTAMs, and the CVFR corridors you must keep 1 km from (zoom in to see them).',
-    rules: ['Daylight and VMC only. Default flying days: weekends — from Friday 14:00 (and holiday eves) until dark on Saturday/holidays, unless a site procedure allows weekdays.',
-      'Not inside IAF-base CTRs. Stay out of prohibited, restricted and danger areas within their published heights.',
-      'Keep 1 km either side of CVFR routes (±500 ft of their altitude) and 5 NM from IFR (ATS) routes.',
-      'No flying within 9 km (5 NM) of the borders unless a specific site procedure allows it.',
-      'Do not take off when the wind exceeds 30 km/h. Check NOTAMs before every flight.'],
+    note: 'Paraglider / hang glider without motor (domestic AIP B-10). Shows what can stop you up to 6,000 ft, CVFR corridors to keep clear of, drone areas, takeoffs and landings, and active NOTAMs. Nature-reserve closures are off: per the AIP they do not apply to non-powered paragliders and hang gliders.',
+    rules: ['Daylight and VMC only. Default days: weekends — Friday and holiday eves from 14:00, Saturdays and holidays until dark (B-10 §3).',
+      'Not over towns or gatherings; at least 300 ft above the highest object within 200 m when over people (B-10 §5).',
+      'Phone the relevant ATC unit just before and after flying in a bubble, sport area or gliding area, and when crossing between them (B-10 §9).',
+      'Never inside IAF-base CTRs. Prohibited, restricted and danger areas, CTRs, TMAs, ATZs and training areas are closed unless coordinated (B-10 §6).',
+      'Keep 5 NM either side of IAF (ATS) routes and ±1,000 ft of their levels; 1 km and ±500 ft from CVFR routes (B-10 §6).',
+      'No flying within 9 km (5 NM) of the borders unless a site procedure allows it (B-10 §6).',
+      'Flying outside these days, areas or rules (“exceptional flying”) needs a plan to the NOTAM office 7 working days ahead (B-10 §13).',
+      'Coast: Netanya cliffs any day; Ashdod–Ashkelon weekends only (B-10 §7). Do not take off in wind above 30 km/h.'],
   },
   ppg: {
     name: 'PPG', speed: 45, lo: 0, hi: 4000, when: 'now',
     layers: [...CORE, ...SPORT, ...SITES, 'cvfr_route', 'nature_reserve', ...N_SPORT],
-    note: 'Powered paraglider, 0–4,000 ft: the bubbles where you may fly for the chosen day, the sport routes between them, takeoffs and landings, plus everything that restricts you at those heights.',
-    rules: ['Fly inside the sport-aviation bubbles; moving between bubbles that do not touch follows procedure B-10.',
-      'Cross sport routes only to transit between areas, at about 200 ft AGL — do not fly along them.',
-      'Keep 1 km either side of CVFR routes and 5 NM from IFR routes. No flight in IAF-base CTRs.',
-      'No flying within 9 km of the borders unless a site procedure allows it. Daylight, VMC.'],
+    note: 'Powered paraglider (foot or wheels; domestic AIP B-08 and B-10). The bubbles are where you may fly — every-day ones and weekend ones (each with its own weekend start) — plus the sport routes between them and everything that restricts you up to 4,000 ft.',
+    rules: ['Daylight, VMC, never over towns or crowds. Minimum 300 ft above ground, 500 ft over national parks (B-08 §2, §4).',
+      'Weekend bubbles: Friday from 06:00 (Sderot N, Nitzanim, Dead Sea, Zohar, Shalem, Oren from 12:00; Sderot S, Be’er Sheva, Meitar, Lehavim from 14:00), holiday eves from 14:00, Saturdays and holidays (B-08 §1). Firing areas stay active until 12:00 on Fridays.',
+      'Without a working transponder (modes A/C): only inside bubbles; not on routes; moving between bubbles only with the Olympia-Zappos tracking app on (B-08 §2a).',
+      'Without a transponder never within 2 km of the Jordan border, or 10 km of the Gaza, Egypt, Syria or Lebanon borders or of Dimona (LLP15) — this overrides the bubble outlines (B-08 §2a).',
+      'If a transponder is fitted, keep it on, code 5100 (B-08 §2).',
+      'Tell ATC 30 min before take-off and right after landing; crossing to an adjacent bubble needs a phone call. With an IAF-approved tracking app, no flight plan is needed outside CTRs (B-10 §13).',
+      'Cross sport routes only to move between areas, at about 200 ft above ground (B-10 §6).'],
   },
   ul: {
     name: 'Ultralight', speed: 110, lo: 0, hi: 6000, when: 'now',
     layers: [...CORE, ...SPORT, 'cvfr_route', 'vfr_points', 'nature_reserve', ...N_SPORT, 'notam_route'],
-    note: 'Ultralight / microlight, 0–6,000 ft: bubbles and sport routes for the chosen day, CVFR routes and reporting points (zoom in), and restrictions at those heights.',
-    rules: ['Bubbles: VFR, no flight plan, but take-off approval from the relevant ATC unit. Routes outside bubbles need a flight plan and radio contact.',
-      'Sport routes are flown at the published altitudes; dashed legs only with controller approval.'],
+    note: 'Ultralight / microlight (domestic AIP B-08): bubbles and sport routes for the chosen moment, CVFR routes and reporting points (zoom in), and restrictions up to 6,000 ft.',
+    rules: ['Daylight VMC; minimum 300 ft above ground, 500 ft over national parks; not over towns or crowds (B-08 §2, §4).',
+      'Routes: keep to the right side, fly the published altitude for your direction (QNH), 1 km either side; landing lights on in two-way routes (B-08 §6).',
+      'Most routes are for weekends and holidays; on weekdays only with real-time ATC approval or a flight plan. On weekdays the same routes carry military and agricultural traffic — listen to the ATC frequency (B-08 §6).',
+      'Each ultralight strip has a circuit zone of 2 km up to 400 ft above ground (B-08 §1).',
+      'Weekdays south of Be’er Sheva: special procedure — request 120 min before take-off via flight information and confirm by phone (B-08 §6).',
+      'Transponder rules as for PPG: without one, only inside bubbles and away from the border / Dimona buffers (B-08 §2a).'],
+  },
+  glider: {
+    name: 'Glider', speed: 90, lo: 0, hi: 10000, when: 'now',
+    layers: [...CORE, 'cvfr_route', 'vfr_points', ...N_SPORT, 'notam_route'],
+    note: 'Sailplanes (domestic AIP B-06). Everything that restricts you up to 10,000 ft, CVFR routes and reporting points.',
+    rules: ['Weekend gliding areas are active up to 10,000 ft (B-06 §2).',
+      'Gliding area ג: phone approval from “Pluto” first, continuous two-way radio with Pluto, permission before entering and a radio check every 15 minutes (B-06 §2).',
+      'Local soaring at Rosh Pina: within 5 NM of the field up to 6,000 ft, coordinated with the tower (B-06).',
+      'The gliding areas themselves are drawn only as images in the AIP, so they are not shown on this map.'],
   },
   ga: {
     name: 'GA / VFR', speed: 180, lo: 0, hi: null, when: 'today',
     layers: [...CORE, 'aip_other', 'cvfr_route', 'cvfr_mil', 'vfr_points', 'sport_bubble_all', 'sport_bubble_end', 'nature_reserve', ...N_SPORT, 'notam_route', 'notam_ifr'],
     note: 'General aviation: all airspace at every height, CVFR and military routes, reporting points, sport bubbles (traffic) and all operational NOTAMs.',
-    rules: ['CVFR routes: max 180 kt unless approved; transponder on (code 5100 unless told otherwise).'],
+    rules: ['CVFR routes: max 180 kt unless approved; transponder on, code 5100 unless told otherwise (B-03).',
+      'Firing areas are not active at weekends (Friday 14:00 to the end of Saturday); midweek ATC has no real-time information on them (B-08 §2).',
+      'Sport bubbles and routes are busy with ultralights and PPGs at weekends.'],
   },
-  uas: { name: 'Drone', speed: 50, lo: 0, hi: 400, when: 'now', layers: ['aip_ctr', 'aip_prohibited', 'aip_restricted', 'aip_danger', 'aip_uas', 'aip_obst', 'nature_reserve', 'notam_uas', 'notam_restr', 'notam_obst', 'notam_airspace', 'custom'], note: 'Drones below 400 ft.', rules: [] },
+  uas: { name: 'Drone', speed: 50, lo: 0, hi: 400, when: 'now', layers: ['traffic', 'aip_ctr', 'aip_atz', 'aip_prohibited', 'aip_restricted', 'aip_danger', 'aip_uas', 'aip_obst', 'uas_area', 'nature_reserve', 'notam_uas', 'notam_restr', 'notam_obst', 'notam_airspace', 'custom'],
+    note: 'Drones below 400 ft: no-fly circles (LLU), drone operating areas, CTRs and NOTAM closures.', rules: ['Drone operating areas (B-09) are activated by NOTAM; outside them follow your licence / permit (VLOS etc.).'] },
   custom: { name: 'Custom', speed: 40, lo: 0, hi: null, layers: 'custom', note: 'Your own selection of layers and heights. Any change you make to layers or heights is saved here automatically and kept between visits.', rules: [] },
   all: { name: 'Everything', speed: 100, lo: 0, hi: null, when: 'any', layers: null, note: 'Every layer at every height.', rules: [] },
 };
@@ -96,6 +119,7 @@ const PICON = {
   para: '<path d="M3 9c3-5 15-5 18 0"/><path d="M4 9l8 9.5L20 9M8.5 9.7 12 18.5l3.5-8.8"/><circle cx="12" cy="20" r="1.4" fill="currentColor"/>',
   ppg: '<path d="M4 6.5c2.8-4 13.2-4 16 0"/><path d="M5 6.5l7 7.5 7-7.5"/><circle cx="12" cy="17.5" r="3.8"/><path d="M12 13.7v7.6M8.2 17.5h7.6"/>',
   ul: '<path d="M2 9.5 12 5l10 4.5L12 11z"/><path d="M12 11v4.5M7.5 19h9M12 15.5 8 19M12 15.5l4 3.5"/><circle cx="7.5" cy="19.6" r="1.3"/><circle cx="16.5" cy="19.6" r="1.3"/>',
+  glider: '<path d="M1.5 10.5h21"/><path d="M12 10.5V8.5M11 10.5l.4 7h1.2l.4-7"/><path d="M9.5 18h5"/>',
   ga: '<path d="M21 15.5v-2l-8-4.8V3.8a1.5 1.5 0 0 0-3 0v4.9l-8 4.8v2l8-2.4v4.8l-2.2 1.6v1.6l3.7-1 3.7 1v-1.6L13 17.9v-4.8z" fill="currentColor" stroke="none"/>',
   uas: '<circle cx="5.5" cy="5.5" r="2.6"/><circle cx="18.5" cy="5.5" r="2.6"/><circle cx="5.5" cy="18.5" r="2.6"/><circle cx="18.5" cy="18.5" r="2.6"/><rect x="9" y="9" width="6" height="6" rx="1.6"/><path d="M7.4 7.4 9 9M16.6 7.4 15 9M7.4 16.6 9 15M16.6 16.6 15 15"/>',
   custom: '<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
@@ -196,7 +220,12 @@ function visible(z, ignoreHidden) {
   }
   if (WIN) {
     if (!activeIn(z, WIN.a, WIN.b)) return false;   // NOTAMs: only those active at the chosen moment
-    if (z.days && !z.days.some(d => WDAYS.has(d))) return false;
+    if (z.days && z.weekend_from != null) {          // B-08 sport infrastructure: weekend starts Fri 06:00 / 12:00 / 14:00
+      const t = new Date(WIN.a), dow = t.getDay(), h = t.getHours() + t.getMinutes() / 60;
+      const weekend = dow === 6 || (dow === 5 && h >= z.weekend_from);
+      if (z.days.includes(6) && !z.days.includes(0) && !weekend) return false;
+      if (z.days.includes(0) && !z.days.includes(6) && weekend) return false;
+    } else if (z.days && !z.days.some(d => WDAYS.has(d))) return false;
   }
   return true;
 }
@@ -255,7 +284,7 @@ function render() {
   }
   tiers();
   if (selected != null && shapes[selected]?.setStyle) shapes[selected].setStyle({ weight: 5, fillOpacity: .32 });
-  lbl(); buildLayerList(); buildHidden(); syncBand(); update();
+  lbl(); buildLayerList(); buildHidden(); syncBand(); update(); if (typeof drawTraffic === 'function') drawTraffic();
 }
 function tiers() {   // de-clutter: small things appear only when zoomed in
   const zm = map.getZoom();
@@ -520,8 +549,8 @@ function buildLayerList() {
   const cnt = {}; zones.forEach(z => { cnt[z.layer] = (cnt[z.layer] || 0) + 1; });
   const vcnt = {}; zones.forEach(z => { if (z.geom && visible(z)) vcnt[z.layer] = (vcnt[z.layer] || 0) + 1; });
   $('#layerlist').innerHTML = GROUPS.map(g => {
-    const rows = Object.entries(META).filter(([k, m]) => m.g === g && cnt[k]); if (!rows.length) return '';
-    return `<h2>${g}</h2><div class="card">${rows.map(([k, m]) => `<label class="row"><span class="dot" style="background:${m.c}"></span><span class="grow"><div>${m.n}</div><div class="sub">${enabled[k] !== false ? `${vcnt[k] || 0} of ${cnt[k]} shown` : `${cnt[k]} available`}</div></span><input class="sw" type="checkbox" data-k="${k}" ${enabled[k] !== false ? 'checked' : ''}></label>`).join('')}</div>`;
+    const rows = Object.entries(META).filter(([k, m]) => m.g === g && (cnt[k] || k === 'traffic')); if (!rows.length) return '';
+    return `<h2>${g}</h2><div class="card">${rows.map(([k, m]) => `<label class="row"><span class="dot" style="background:${m.c}"></span><span class="grow"><div>${m.n}</div><div class="sub">${k === 'traffic' ? esc(trafficStatus()) : enabled[k] !== false ? `${vcnt[k] || 0} of ${cnt[k]} shown` : `${cnt[k]} available`}</div></span><input class="sw" type="checkbox" data-k="${k}" ${enabled[k] !== false ? 'checked' : ''}></label>`).join('')}</div>`;
   }).join('');
   $$('#layerlist input').forEach(i => i.onchange = () => { toCustom(); enabled[i.dataset.k] = i.checked; saveCustom(); render(); });
 }
@@ -547,7 +576,7 @@ function setWhen(w, quiet) {
   when = w; store.set('when', w);
   if (w === 'at' && (!atTime || atTime < Date.now() - 3600000)) setAt(Date.now() + 3 * 3600000, true);
   timeLabel();
-  if (!quiet && loaded) render();
+  if (!quiet && loaded) { render(); pollTraffic(); }
 }
 const toLocalInput = t => { const d = new Date(t - new Date(t).getTimezoneOffset() * 60000); return d.toISOString().slice(0, 16); };
 function setAt(t, quiet) { atTime = Math.round(t / 60000) * 60000; store.set('atTime', atTime); when = 'at'; store.set('when', 'at'); timeLabel(); if (!quiet) render(); }
@@ -603,7 +632,7 @@ async function load(refresh) {
   } catch (e) { toast('Could not load data — showing what is cached.'); }
   zones = (DATA.zones || []).concat(customZones()); zones.forEach((z, i) => z._k = i);
   buildSources();
-  if (!loaded) { loaded = true; buildProfiles(); }
+  if (!loaded) { loaded = true; buildProfiles(); setTimeout(pollTraffic, 300); }
   render();
   if (refresh) toast(`Updated · ${zones.length} items`);
 }
@@ -702,6 +731,71 @@ function parseKML(text, src) {
       if (ring.length >= 3) out.push({ id: nm, name: nm, floor_ft: 0, ceil_ft: null, text: pm.querySelector('description')?.textContent || '', source: src, geom: { kind: 'polygon', ring } }); }); });
   return out;
 }
+
+/* ================================================================ live traffic */
+const TR = { items: [], t: 0, err: null, sources: null, layer: L.layerGroup().addTo(map), timer: null, allAlt: store.get('trAllAlt', false) };
+const trafficUrl = () => (store.get('trafficUrl', '') || '').trim() || 'api/traffic';
+const KIND = {
+  plane: ['#0a84ff', 'Aircraft'], jet: ['#0a84ff', 'Jet'], light: ['#0a84ff', 'Light aircraft'], 'tow plane': ['#0a84ff', 'Tow plane'], 'drop plane': ['#0a84ff', 'Drop plane'],
+  helicopter: ['#af52de', 'Helicopter'], glider: ['#30b94d', 'Glider'], ultralight: ['#ff9f0a', 'Ultralight'], paraglider: ['#ff6a00', 'Paraglider'],
+  'hang glider': ['#ff6a00', 'Hang glider'], drone: ['#ff2d55', 'Drone'], balloon: ['#ff2d55', 'Balloon'], airship: ['#ff2d55', 'Airship'], skydiver: ['#5ac8fa', 'Skydiver'], unknown: ['#8e8e93', 'Unknown'] };
+const TR_SHAPE = {
+  plane: '<path d="M12 2.5c.8 0 1.3.7 1.3 1.6v5.2l7.2 4.3v1.9l-7.2-2.2v4.5l2 1.5v1.5L12 20l-3.3.8v-1.5l2-1.5v-4.5l-7.2 2.2v-1.9l7.2-4.3V4.1c0-.9.5-1.6 1.3-1.6z"/>',
+  helicopter: '<path d="M3 5h18v1.4H3z"/><path d="M11.3 6.4h1.4v2H11.3z"/><ellipse cx="12" cy="12" rx="3.4" ry="4.2"/><path d="M11.4 16h1.2v5h-1.2z"/>',
+  glider: '<path d="M1.5 9.6h21v1.5h-21z"/><path d="M11 5h2l.3 14.5h-2.6z"/><path d="M9 19h6v1.4H9z"/>',
+  wing: '<path d="M3 9c3-5 15-5 18 0l-2 .8C16 6 8 6 5 9.8z"/><circle cx="12" cy="17" r="2.2"/><path d="M5 9.6 11 16M19 9.6 13 16" stroke="currentColor" stroke-width="1" fill="none"/>',
+  drone: '<circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/><rect x="9" y="9" width="6" height="6" rx="1.5"/>',
+  dot: '<circle cx="12" cy="12" r="6"/>' };
+const shapeFor = k => ['paraglider', 'hang glider', 'ultralight'].includes(k) ? 'wing' : k === 'helicopter' ? 'helicopter' : k === 'glider' ? 'glider' : ['drone'].includes(k) ? 'drone' : ['balloon', 'airship', 'skydiver', 'unknown'].includes(k) ? 'dot' : 'plane';
+function trafficStatus() {
+  if (enabled.traffic === false) return 'Off';
+  if (when !== 'now') return 'Shown only for “Now”';
+  if (TR.err) return TR.err;
+  if (!TR.t) return 'Loading…';
+  const s = TR.sources || {}; const n = trVisible().length;
+  return `${n} shown · ADS-B ${s.adsb?.ok ? 'ok' : 'down'} · FLARM/OGN ${s.ogn?.ok ? 'ok' : 'offline'} · ${new Date(TR.t * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+}
+function trVisible() {
+  const b = bandNow();
+  return TR.items.filter(it => it.lat != null && (TR.allAlt || it.gnd || ((it.alt_ft ?? 0) >= (b.lo || 0) - 500 && (b.hi == null || (it.alt_ft ?? 0) <= b.hi + 500))));
+}
+function drawTraffic() {
+  TR.layer.clearLayers();
+  if (enabled.traffic === false || when !== 'now') return;
+  for (const it of trVisible()) {
+    const [c] = KIND[it.kind] || KIND.unknown, shp = shapeFor(it.kind), rot = shp === 'plane' || shp === 'glider' || shp === 'helicopter' || shp === 'wing' ? (it.trk || 0) : 0;
+    const vs = it.vs_fpm > 150 ? '↑' : it.vs_fpm < -150 ? '↓' : '';
+    const alt = it.gnd ? 'GND' : it.alt_ft != null ? `${Math.round(it.alt_ft / 100) * 100}` : '';
+    const ic = L.divIcon({ className: '', iconSize: [28, 28], iconAnchor: [14, 14],
+      html: `<div class="trk" style="--c:${c}"><svg viewBox="0 0 24 24" style="transform:rotate(${rot}deg)">${TR_SHAPE[shp]}</svg><span>${esc((it.cs || '').slice(0, 9))}<br>${alt}${vs}</span></div>` });
+    L.marker([it.lat, it.lon], { icon: ic, zIndexOffset: 1000, keyboard: false }).on('click', e => { L.DomEvent.stopPropagation(e); openTraffic(it.id); }).addTo(TR.layer);
+  }
+}
+function openTraffic(id) {
+  const it = TR.items.find(x => x.id === id); if (!it) return;
+  const [c, label] = KIND[it.kind] || KIND.unknown, kts = it.gs_kt != null ? `${Math.round(it.gs_kt)} kt · ${Math.round(it.gs_kt * 1.852)} km/h` : '—';
+  const rows = [['Type', esc(label + (it.model ? ` · ${it.model}` : ''))], ['Altitude', it.gnd ? 'On the ground' : `${(it.alt_ft ?? 0).toLocaleString('en-US')} ft${it.src === 'ADS-B' ? ' (pressure)' : ' (GPS)'}${it.alt_geo_ft ? ` · GPS ${it.alt_geo_ft.toLocaleString('en-US')} ft` : ''}`],
+    ['Speed', kts], ['Track', it.trk != null ? `${Math.round(it.trk)}°` : '—'], ['Vertical', it.vs_fpm != null ? `${it.vs_fpm > 0 ? '+' : ''}${Math.round(it.vs_fpm)} ft/min` : '—']];
+  if (it.reg) rows.push(['Registration', esc(it.reg)]); if (it.squawk) rows.push(['Squawk', esc(it.squawk) + (it.squawk === '5100' ? ' (VFR / sport)' : '')]);
+  rows.push(['Source', esc(it.src)], ['Last seen', `${Math.round(it.age || 0)} s ago`]);
+  $('#dbody').innerHTML = `<div class="dtype" style="color:${c}">Live traffic · ${esc(label)}</div><div class="dname">${esc(it.cs || it.id)}</div>
+    <dl class="kv">${rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl>
+    <div class="note">Live positions come from volunteer ADS-B and FLARM/OGN receivers. Coverage is partial, many paragliders and most drones are not visible. Never rely on this for separation.</div>`;
+  detailFromSpot = false; openOverlay('#detail');
+}
+async function pollTraffic() {
+  clearTimeout(TR.timer);
+  if (enabled.traffic !== false && when === 'now' && document.visibilityState === 'visible') {
+    try {
+      const r = await fetch(trafficUrl(), { cache: 'no-store' }); if (!r.ok) throw new Error(r.status === 404 ? 'needs the traffic relay — see More' : 'HTTP ' + r.status);
+      const d = await r.json(); TR.items = d.items || []; TR.t = d.t; TR.sources = d.sources; TR.err = null;
+    } catch (e) { TR.err = /relay/.test(e.message) ? 'Live traffic needs the traffic relay — see More' : 'Live traffic unavailable (' + e.message + ')'; TR.items = []; }
+    drawTraffic(); const row = document.querySelector('#layerlist input[data-k=traffic]')?.closest('.row')?.querySelector('.sub'); if (row) row.textContent = trafficStatus();
+    if ($('#trstat')) $('#trstat').textContent = trafficStatus();
+  } else drawTraffic();
+  TR.timer = setTimeout(pollTraffic, 10000);
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pollTraffic(); });
 
 /* ================================================================ wiring */
 function setSheet(s) { const sh = $('#sheet'); sh.classList.remove('s0', 's1', 's2', 's3'); sh.classList.add(s); store.set('sheet', s); setTimeout(() => map.invalidateSize(), 320); }
@@ -835,6 +929,8 @@ function closePanel() { if (mobile()) setSheet('s0'); else setCollapsed(true); }
 $('#tbLayers').onclick = () => { closeMenu(); if (panelOpen() && $('#tabs .on')?.dataset.t === 'layers' && !$('.overlay.on')) return closePanel(); openPanel('layers'); };
 
 $$('[data-x]').forEach(b => b.onclick = () => doExport(b.dataset.x));
+$('#trUrl').value = store.get('trafficUrl', ''); $('#trUrl').onchange = e => { store.set('trafficUrl', e.target.value.trim()); pollTraffic(); };
+$('#trAll').checked = TR.allAlt; $('#trAll').onchange = e => { TR.allAlt = e.target.checked; store.set('trAllAlt', TR.allAlt); drawTraffic(); };
 $('#cust').onchange = async e => {
   const f = e.target.files[0]; if (!f) return; const t = await f.text(), ext = f.name.split('.').pop().toLowerCase();
   try {
