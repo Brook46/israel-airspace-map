@@ -500,7 +500,7 @@ function doSearch(q, keepPlaces) {
         const js = await r.json();
         placeHits = js.map(p => ({ name: p.name || p.display_name.split(',')[0], sub: p.display_name.split(',').slice(1, 3).join(',').trim() || p.type, lat: +p.lat, lon: +p.lon }));
       } catch { placeHits = []; }
-      placeQ = raw; if ($('#q').value.trim() === raw) doSearch(raw, true);
+      placeQ = raw; if ($('#q2').value.trim() === raw) doSearch(raw, true);
     }, 650);
   }
 }
@@ -710,7 +710,7 @@ $('#grab').onclick = () => {   // tap the tab: collapse fully / open again
 $$('.overlay .bar').forEach(b => { const m = document.createElement('button'); m.className = 'back mapbtn'; m.innerHTML = 'Map <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
   m.onclick = () => { if (mobile()) setSheet('s0'); else setCollapsed(true); }; b.appendChild(m); });
 $$('#tabs button').forEach(b => b.onclick = () => { $$('#tabs button').forEach(x => x.classList.toggle('on', x === b)); $$('.pane').forEach(p => p.classList.toggle('on', p.id === 'p-' + b.dataset.t)); closeOverlay('#detail'); if (b.dataset.t === 'export') exportNote(); });
-$$('[data-close]').forEach(b => b.onclick = () => { const id = b.closest('.overlay').id; closeOverlay('#' + id); if (id === 'detail' && detailFromSpot && lastSpot) openOverlay('#spot'); else if (id === 'spot') clearPinIfNoGps(); if (id === 'search') { $('#q').value = ''; $('#q').blur(); $('#sheet').classList.remove('searching'); } });
+$$('[data-close]').forEach(b => b.onclick = () => { const id = b.closest('.overlay').id; closeOverlay('#' + id); if (id === 'detail' && detailFromSpot && lastSpot) openOverlay('#spot'); else if (id === 'spot') clearPinIfNoGps(); if (id === 'search') { $('#q2').value = ''; $('#q2').blur(); } });
 function clearPinIfNoGps() { /* keep the pin so the Here tab still works */ }
 function toggleHidden(k) {
   const z = zones.find(x => x._k == k); if (!z) return; const key = zkey(z);
@@ -719,7 +719,7 @@ function toggleHidden(k) {
 }
 function refreshLists() {
   if ($('#spot').classList.contains('on') && lastSpot) { const st = $('#spotbody').scrollTop; openSpot(lastSpot.ll, lastSpot.tapped); $('#spotbody').scrollTop = st; }
-  if ($('#search').classList.contains('on')) doSearch($('#q').value, true);
+  if ($('#search').classList.contains('on')) doSearch($('#q2').value, true);
 }
 document.addEventListener('click', e => {
   const eye = e.target.closest('[data-eye]'); if (eye) { e.stopPropagation(); e.preventDefault(); toggleHidden(eye.dataset.eye); return; }
@@ -730,13 +730,14 @@ document.addEventListener('click', e => {
   openDetail(row.dataset.k, pin ? L.latLng(pin) : me ? L.latLng(me.lat, me.lng) : null);
 });
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.classList?.contains('zrow')) e.target.click(); });
-function openSearch() {   // results open *below* the search field so you always see what you type
-  const sr = $('.searchrow'); $('#search').style.top = (sr.offsetTop + sr.offsetHeight + 4) + 'px';
-  $('#sheet').classList.add('searching'); openOverlay('#search');
+function openSearch() {   // the search field lives in the search card's own bar, so nothing can overlap it
+  openPanel(); openOverlay('#search'); const q = $('#q2'); doSearch(q.value);
+  q.focus(); setTimeout(() => q.focus(), 80);
 }
-$('#q').addEventListener('focus', () => { openSearch(); doSearch($('#q').value); });
-$('#q').oninput = e => { openSearch(); doSearch(e.target.value); };
-$('#q').addEventListener('keydown', e => { if (e.key === 'Escape') { $('#q').value = ''; closeOverlay('#search'); $('#q').blur(); } });
+$('#q').addEventListener('click', openSearch);
+$('#q').addEventListener('focus', e => { e.target.blur(); openSearch(); });
+$('#q2').oninput = e => doSearch(e.target.value);
+$('#q2').addEventListener('keydown', e => { if (e.key === 'Escape') closeOverlay('#search'); });
 $('#stat').onclick = () => { $$('#tabs button')[1].click(); setTimeout(() => $('#sources').scrollIntoView({ block: 'center' }), 50); };
 $('#upd').onclick = async () => {
   const b = $('#upd'); b.classList.add('spin');
@@ -791,7 +792,7 @@ function setCollapsed(c) { $('#sheet').classList.toggle('collapsed', c); documen
 /* ---------------- toolbar + menus */
 function openPanel(tab) {
   if (mobile()) { if (curState() === 's0') setSheet('s2'); } else setCollapsed(false);
-  if (tab) { const b = $(`#tabs [data-t=${tab}]`); if (b) b.click(); }
+  if (tab) { ['#search', '#spot', '#detail'].forEach(id => $(id).classList.contains('on') && closeOverlay(id)); const b = $(`#tabs [data-t=${tab}]`); if (b) b.click(); }
 }
 const menu = $('#menu');
 function showMenu(anchor, title, items) {   // items: [{label, sub, on, icon, act}] or {html}
@@ -817,7 +818,7 @@ $('#tbTime').onclick = e => { e.stopPropagation(); if (menu.classList.contains('
     { html: `<label class="mi pick"><span>Pick date &amp; time<small>${when === 'at' && atTime ? 'now set to ' + esc(fmtT(atTime)) : 'plan up to a month ahead'}</small></span></label><input type="datetime-local" id="planAt" value="${toLocalInput(atTime || Date.now() + 3 * 3600000)}">` }]);
   $('#planAt').onchange = ev => { const t = new Date(ev.target.value).getTime(); if (!isNaN(t)) { setAt(t); closeMenu(); } };
 };
-$('#tbSearch').onclick = () => { closeMenu(); openPanel(); setTimeout(() => $('#q').focus(), 60); };
+$('#tbSearch').onclick = () => { closeMenu(); if (panelOpen() && $('#search').classList.contains('on')) { closeOverlay('#search'); return closePanel(); } openSearch(); };
 const panelOpen = () => mobile() ? curState() !== 's0' : !$('#sheet').classList.contains('collapsed');
 function closePanel() { if (mobile()) setSheet('s0'); else setCollapsed(true); }
 $('#tbLayers').onclick = () => { closeMenu(); if (panelOpen() && $('#tabs .on')?.dataset.t === 'layers' && !$('.overlay.on')) return closePanel(); openPanel('layers'); };

@@ -195,7 +195,7 @@ body.panel-hidden #panelBtn{display:grid!important}
 
 #search{border-top:1px solid var(--sep);border-radius:0}
 #search .bar{padding:8px 16px 4px}
-#sheet.searching .searchrow{position:relative;z-index:9;box-shadow:0 0 0 2px var(--blue)}
+
 
 .overlay .bar .mapbtn{margin-left:auto}
 #search .bar .mapbtn{display:none}
@@ -283,3 +283,8 @@ body.panel-hidden #panelBtn{display:grid!important}
   #fab{display:none}
   #toast{bottom:calc(92px + env(safe-area-inset-bottom))}
 }
+
+.sbar{gap:10px}
+.searchrow.in{flex:1;margin:0}
+.searchrow.in:focus-within{box-shadow:0 0 0 2px var(--blue)}
+#q[readonly]{cursor:text}
