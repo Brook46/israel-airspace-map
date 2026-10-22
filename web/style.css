@@ -198,3 +198,14 @@ body.panel-hidden #panelBtn{display:grid!important}
 #search{border-top:1px solid var(--sep);border-radius:0}
 #search .bar{padding:8px 16px 4px}
 #sheet.searching .searchrow{position:relative;z-index:9;box-shadow:0 0 0 2px var(--blue)}
+
+.overlay .bar .mapbtn{margin-left:auto}
+#search .bar .mapbtn{display:none}
+@media (max-width:760px){
+  #grab{position:relative;z-index:12;background:inherit}
+  .overlay{top:22px!important}
+  #sheet.s1 .overlay{top:22px!important}
+  #sheet.s3{height:84vh}
+  #grab{height:28px;cursor:grab;touch-action:none}
+  #grab i{width:44px}
+}

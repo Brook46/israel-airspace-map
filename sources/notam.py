@@ -176,6 +176,25 @@ def intervals(n, now=None, horizon_days=31):
 
 
 # ---------------------------------------------------------------- geometry
+def _seg_geom(seg):
+    """Exact shape described in one 'AN AREA …' sentence, or None."""
+    m = re.search(r'(\d+(?:\.\d+)?)\s*(NM|KM|M)\s*RADIUS\s*CENT\w*\s*ON\s*(?:PSN\s*)?(.*)', seg)
+    if m:
+        c = find_coords(m.group(3))
+        if c: return circle(c[0][0], c[0][1], float(m.group(1)) * {'NM': NM, 'KM': 1000.0, 'M': 1.0}[m.group(2)])
+    pts = find_coords(seg)
+    if len(pts) >= 3: return polygon(pts)
+    return None
+
+
+def geometries(n, waypoints):
+    """All exact areas of a NOTAM (some publish a polygon plus a circle); falls back to geometry()."""
+    e = n.get('e', '')
+    segs = [s for s in re.split(r'(?=\bAN AREA\b|\bAREA\s+\d\b)', e) if s.strip()]
+    gs = [g for g in (_seg_geom(s) for s in segs) if g] if len(segs) > 1 else []
+    return gs if len(gs) > 1 else [geometry(n, waypoints)]
+
+
 def geometry(n, waypoints):
     e = n.get('e', '')
     pts = find_coords(e)
@@ -204,14 +223,16 @@ def to_zone(n, waypoints, now=None):
     if hi is None and 'q_hi' in n: hi, hi_ref = (UNL, 'UNL') if n['q_hi'] >= 99900 else (n['q_hi'], 'FL')
     iv = intervals(n, now)
     z = {'id': n['id'], 'name': n['id'], 'layer': layer, 'floor_ft': lo, 'ceil_ft': hi, 'floor_ref': lo_ref, 'ceil_ref': hi_ref,
-         'geom': geometry(n, waypoints), 'text': n.get('e', ''), 'source': 'NOTAM', 'location': n.get('loc', ''),
+         'geom': None, 'text': n.get('e', ''), 'source': 'NOTAM', 'location': n.get('loc', ''),
          'valid_from': n.get('from'), 'valid_to': n.get('to'), 'est': n.get('est'), 'schedule': n.get('sched', ''),
          'times': iv if iv is not None else ([[n['from'], n['to'] or n['from'] + 14 * 86400]] if n.get('from') else None),
          'q': n.get('q', ''), 'raw': n['raw']}
-    return z
+    gs = geometries(n, waypoints)
+    if len(gs) == 1: z['geom'] = gs[0]; return [z]
+    return [dict(z, geom=g, name=f"{n['id']} (area {i + 1} of {len(gs)})") for i, g in enumerate(gs)]
 
 
 def fetch(cache_dir, waypoints, log=print):
     ids = list_ids()
     det = fetch_details(ids, cache_dir, log=log)
-    return [to_zone(parse(det[i]), waypoints) for i in ids if i in det]
+    return [z for i in ids if i in det for z in to_zone(parse(det[i]), waypoints)]

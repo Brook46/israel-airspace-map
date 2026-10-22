@@ -12,7 +12,7 @@ Sources
 Needs:  pip install pymupdf   (only for the domestic AIP PDF)
 """
 import json, os, re, sys, time, traceback, urllib.parse, urllib.request
-from sources import notam, eaip, domestic, charts, custom, osm_sites, purpose, reserves
+from sources import notam, eaip, domestic, charts, custom, osm_sites, purpose, reserves, uas_areas, effective
 from sources.geometry import UNL
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -85,7 +85,7 @@ def step_domestic(force):
     if derived and meta.get('parsed') == meta.get('name') and not force:
         return derived, meta.get('name'), 'cached'
     log('  parsing domestic AIP (tables, VFR points, charts)…')
-    derived = {'vfr': eaip.parse_vfr_points(pdf), 'tables': domestic.parse_pdf(pdf), 'charts': charts.extract(pdf, log=log), 'desc': purpose.descriptions(pdf)}
+    derived = {'vfr': eaip.parse_vfr_points(pdf), 'tables': domestic.parse_pdf(pdf), 'charts': charts.extract(pdf, log=log), 'desc': purpose.descriptions(pdf), 'uas': uas_areas.parse(pdf)}
     jsave(D('cache', 'domestic_derived.json'), derived); meta['parsed'] = meta.get('name'); jsave(D('cache', 'domestic_meta.json'), meta)
     return derived, meta.get('name'), 'parsed'
 
@@ -174,7 +174,7 @@ def main(force=False):
         waypoints = {k: tuple(v) for k, v in derived['vfr'].items()}
         chart = [z for z in derived['charts'] if z['layer'] != 'launch_site']          # launch sites come from OpenStreetMap
         chart = [z for z in chart if not (z['layer'] == 'aip_ctr' and re.search(r'Ben Gurion|Haifa|Ller', z['name'], re.I) and not z.get('days'))]  # exact eAIP versions exist
-        dz = derived['tables'] + chart
+        dz = derived['tables'] + chart + derived.get('uas', [])
         dz += [{'id': k, 'name': k, 'layer': 'vfr_points', 'floor_ft': None, 'ceil_ft': None, 'text': 'VFR reporting point',
                 'source': 'Domestic AIP', 'geom': {'kind': 'point', 'ring': [list(v)]}} for k, v in waypoints.items()]
         for z in dz: z['_src'] = 'domestic'
@@ -234,6 +234,9 @@ def main(force=False):
     if cz: src['custom'] = {'ok': True, 'msg': f'{len(cz)} zones from data/custom', 'updated': time.time()}
 
     allz = ez + dz + nz + cz
+    for z in allz:
+        e = effective.effective(z)
+        if e: z['effective'] = e
     zones = [rnd(z) for z in allz if reliable(z)]
     dropped = len(allz) - len(zones)
     if dropped: log(f'  left out {dropped} shapes that could not be reproduced exactly')
