@@ -30,6 +30,8 @@ const META = {
   aip_uas: { z: 9, g: 'Airspace', n: 'No-fly circles (LLU)', t: 'No-fly area (LLU)', c: '#ff2d55', d: 'Small no-fly circle around a sensitive site. Applies to drones, sport aviation and helicopters flying outside published routes.' },
   aip_obst: { z: 9, g: 'Airspace', n: 'Fixed obstacles & balloons', t: 'Fixed obstacle', c: '#8d6e4c', d: 'Permanent hazard such as a tethered balloon. Keep clear.' },
   aip_other: { g: 'Airspace', n: 'Other airspace', t: 'Airspace', c: '#8e8e93' },
+  uas_area: { z: 8, g: 'Airspace', n: 'Drone operating areas (by NOTAM)', t: 'Drone (UAS) operating area', c: '#c2185b',
+    d: 'Official drone operating area (domestic AIP B-09). It is closed to other traffic only when drone activity is coordinated or published by NOTAM — check the active NOTAMs for the chosen time.' },
   nature_reserve: { z: 9, g: 'Nature', n: 'Nature reserves, parks & nesting sites', t: 'Nature reserve / national park', c: '#2e8b57',
     d: 'Official list (domestic AIP, appendix E): no flight below the listed height above ground. Per the AIP these closures do not apply to non-powered paragliders and hang gliders. The outline comes from OpenStreetMap.' },
   // routes
@@ -48,7 +50,7 @@ const META = {
   custom: { g: 'Your files', n: 'Imported airspace', t: 'Imported airspace', c: '#5e5ce6' },
 };
 const GROUPS = ['Paragliding sites', 'Sport aviation', 'Airspace', 'Nature', 'Routes & points', 'NOTAMs', 'Your files'];
-const CORE = ['aip_ctr', 'aip_atz', 'aip_tma', 'aip_prohibited', 'aip_restricted', 'aip_danger', 'aip_uas', 'aip_obst', 'custom'];
+const CORE = ['aip_ctr', 'aip_atz', 'aip_tma', 'uas_area', 'aip_prohibited', 'aip_restricted', 'aip_danger', 'aip_uas', 'aip_obst', 'custom'];
 const SPORT = ['sport_bubble_all', 'sport_bubble_end', 'sport_route_mid', 'sport_route_end', 'sport_route_special'];
 const N_SPORT = ['notam_restr', 'notam_para', 'notam_uas', 'notam_obst', 'notam_sport', 'notam_airspace'];
 const SITES = ['launch_site', 'landing_site'];
@@ -231,7 +233,7 @@ function render() {
       sh = L.polyline(z.geom.ring, { color: m.c, weight: z.layer.startsWith('notam') ? 4 : 2.5, opacity: .85, dashArray: z.approval || z.layer.startsWith('notam') ? '8 6' : null });
       sh.on('click', () => { clickZone = z; });
     } else {
-      const bub = z.layer.startsWith('sport_bubble') || z.layer === 'nature_reserve', appr = z.geom.approx, wk = z.layer === 'aip_ctr' && z.days;
+      const bub = z.layer.startsWith('sport_bubble') || z.layer === 'nature_reserve', appr = z.geom.approx || z.layer === 'uas_area', wk = z.layer === 'aip_ctr' && z.days;
       sh = L.polygon(z.geom.ring, { color: m.c, weight: bub ? 1.2 : appr ? 1.2 : 2, dashArray: appr || wk ? '5 5' : z.matched ? '6 3' : null, fillColor: m.c, fillOpacity: bub ? .16 : appr ? .035 : z.matched ? .3 : .12 });
       if (LABELED.has(z.layer) && !appr) {
         const c = z.geom.center || polyLabelPoint(z);
@@ -397,12 +399,14 @@ function openDetail(k, at, fromSpot) {
   let timeHtml = '';
   if (z.source === 'NOTAM') {
     const na = nextActive(z);
+    rows.unshift(['In force', z.times?.length ? z.times.filter(([s, e]) => e * 1000 > Date.now()).slice(0, 4).map(([s, e]) => `${fmtT(s * 1000)}–${fmtH(e * 1000)}`).join(' · ') + (z.times.length > 4 ? ' …' : '') : 'See validity below']);
     rows.push(['Valid', `${z.valid_from ? fmtT(z.valid_from * 1000) : '—'} → ${z.valid_to ? fmtT(z.valid_to * 1000) + (z.est ? ' (est.)' : '') : 'permanent'}`]);
     if (z.schedule) rows.push(['Schedule (UTC)', esc(z.schedule)]);
     timeHtml = na ? (na.now ? `<div class="chipline on">● Active now — until ${fmtH(na.e)}</div>` : `<div class="chipline">Next active ${fmtT(na.s)} – ${fmtH(na.e)} (in ${relTime(na.s)})</div>`) : '<div class="chipline">No active period in the next 2 weeks</div>';
     const up = (z.times || []).filter(([s, e]) => e * 1000 > Date.now()).slice(0, 6);
     if (up.length > 1) timeHtml += `<div class="sub" style="margin:4px 2px 10px">Upcoming: ${up.map(([s, e]) => `${fmtT(s * 1000)}–${fmtH(e * 1000)}`).join(' · ')}</div>`;
   }
+  if (z.effective) rows.unshift(['In force', esc(z.effective)]);
   if (z.purpose?.length) rows.unshift(['Purpose', esc(z.purpose.join(' · '))]);
   if (z.contact) rows.push(['Coordinate with', esc(z.contact)]);
   if (z.source?.startsWith('eAIP') && z.text) rows.push(['Activity (AIP)', esc(z.text)]);
@@ -440,6 +444,7 @@ function closeOverlay(id) {
 const GROUPS_AT = [
   ['No-fly & restricted', ['aip_prohibited', 'aip_uas', 'aip_restricted', 'aip_danger', 'aip_obst']],
   ['Controlled airspace', ['aip_ctr', 'aip_atz', 'aip_tma', 'aip_other']],
+  ['Drone operating areas', ['uas_area']],
   ['Active NOTAMs', ['notam_restr', 'notam_para', 'notam_uas', 'notam_obst', 'notam_sport', 'notam_airspace', 'notam_route', 'notam_ifr']],
   ['Nature reserves', ['nature_reserve']],
   ['Sport aviation', ['sport_bubble_all', 'sport_bubble_end']],
@@ -691,6 +696,14 @@ function parseKML(text, src) {
 /* ================================================================ wiring */
 function setSheet(s) { const sh = $('#sheet'); sh.classList.remove('s1', 's2', 's3'); sh.classList.add(s); }
 $('#grab').onclick = () => { const sh = $('#sheet'); setSheet(sh.classList.contains('s2') ? 's3' : sh.classList.contains('s3') ? 's1' : 's2'); };
+(() => {   // swipe the handle: down = show more map, up = show more panel
+  let y0 = null; const g = $('#grab');
+  g.addEventListener('touchstart', e => { y0 = e.touches[0].clientY; }, { passive: true });
+  g.addEventListener('touchend', e => { if (y0 == null) return; const dy = e.changedTouches[0].clientY - y0; y0 = null; const sh = $('#sheet');
+    if (dy > 30) setSheet(sh.classList.contains('s3') ? 's2' : 's1'); else if (dy < -30) setSheet(sh.classList.contains('s1') ? 's2' : 's3'); });
+})();
+$$('.overlay .bar').forEach(b => { const m = document.createElement('button'); m.className = 'back mapbtn'; m.innerHTML = 'Map <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+  m.onclick = () => { if (innerWidth <= 760) setSheet('s1'); else setCollapsed(true); }; b.appendChild(m); });
 $$('#tabs button').forEach(b => b.onclick = () => { $$('#tabs button').forEach(x => x.classList.toggle('on', x === b)); $$('.pane').forEach(p => p.classList.toggle('on', p.id === 'p-' + b.dataset.t)); closeOverlay('#detail'); if (b.dataset.t === 'export') exportNote(); });
 $$('[data-close]').forEach(b => b.onclick = () => { const id = b.closest('.overlay').id; closeOverlay('#' + id); if (id === 'detail' && detailFromSpot && lastSpot) openOverlay('#spot'); else if (id === 'spot') clearPinIfNoGps(); if (id === 'search') { $('#q').value = ''; $('#q').blur(); $('#sheet').classList.remove('searching'); } });
 function clearPinIfNoGps() { /* keep the pin so the Here tab still works */ }
